@@ -1,0 +1,47 @@
+{
+  "entity": {
+    "sensor": {
+      "vehicle_status": {
+        "state": {
+          "parked": "Parked (monitoring)",
+          "position_saved": "Position saved (not monitoring)",
+          "alarm_triggered": "Alarm triggered",
+          "awaiting_position": "Awaiting position",
+          "unknown": "Unknown"
+        }
+      }
+    }
+  },
+  "component": {
+    "messages": {
+      "moved_title": "🚨 Vehicle moved!",
+      "moved_message": "The vehicle has moved! Open: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Alarm disabled via notification",
+      "vehicle_tracker_title": "Vehicle Tracker",
+      "open_map_title": "Open map",
+      "saved_position_title": "📍 Saved parking position",
+  "device_tracker_help": "Select the device_tracker used to detect the vehicle's location (example: device_tracker.my_phone).",
+  "person_help": "Person associated with the vehicle (used for notifications), e.g. person.john.",
+  "notifier_help": "Select the notify service to use (e.g. mobile_app_your_phone, telegram).",
+  "tolerance_help": "Tolerance radius in meters used to detect movement vs. small GPS variation (example: 200).",
+  "activation_mode_help": "Choose activation mode: 'connection' (save on disconnect), 'position' (save after stable location), 'combined' (both), 'manual' (manual saves).",
+  "tag_model_help": "Bluetooth tag model – some models report coordinates differently (e.g. Samsung SmartTag, Tile).",
+  "webhook_help": "Optional: enter a custom webhook token (e.g. my-token-123), or leave empty to have one generated.",
+      "control_title": "Vehicle BT Parking Sentinel — Control",
+      "control_description": "Use the buttons to start/stop the sentinel or trigger a save.",
+      "start_button": "Start (enable)",
+      "stop_button": "Stop (disable)",
+      "save_button": "Trigger save now",
+      "saved_coords_label": "Saved coords",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "locationType",
+      "last_seen_label": "last_seen",
+      "stationary_counter_label": "stationary counter",
+      "alarm_label": "alarm",
+      "tracker_label": "Tracker",
+      "entity_not_found": "Entity {entity} not found",
+      "debug_help": "Enable verbose debug logs (useful for troubleshooting).",
+      "stationary_help": "Stationary checks: how long and how many samples to consider a stable position before saving."
+    }
+  }
+}

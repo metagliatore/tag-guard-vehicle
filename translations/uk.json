@@ -1,0 +1,22 @@
+{
+  "component": {
+    "title": "Vehicle BT Parking Sentinel",
+    "config": {
+      "activation_help": "Режим 'manual' дозволяє вручну активувати sentinel; він завжди доступний і не потребує параметрів 'stationary'.",
+      "user_title": "Налаштування Vehicle BT Parking Sentinel",
+      "user_description": "Виберіть device_tracker, person entity та режим активації.\nРежим 'manual' вимагає ручної активації.",
+      "stationary_title": "Параметри stationary",
+      "stationary_description": "Визначте хвилини та кількість повторних звітів, необхідних для підтвердження позиції.",
+      "show_token_title": "Webhook token",
+      "show_token_description": "Скопіюйте показаний токен: він знадобиться вам для виклику webhook, що зберігає позицію."
+    }
+    ,
+    "messages": {
+      "saved_position_title": "📍 Позиція паркування збережена",
+      "saved_position_manual_title": "📍 Позиція паркування збережена (ручн.)",
+      "moved_title": "🚨 Транспорт переміщено!",
+      "moved_message": "Транспортний засіб переміщено! Відкрийте: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Тривога відключена через сповіщення"
+    }
+  }
+}

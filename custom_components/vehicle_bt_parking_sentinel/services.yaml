@@ -1,0 +1,29 @@
+save_position:
+  name: Save Position
+  description: Force-save the current device_tracker position.
+  fields: {}
+
+manual_trigger:
+  name: Manual Trigger
+  description: Quick activation of parking monitoring. Saves current device_tracker position and enables the alarm. This is a shortcut alternative to the smart activation modes (connection/position/combined).
+  fields: {}
+
+reset_flags:
+  name: Reset Flags
+  description: Reset notification flags to allow movement notifications again.
+  fields: {}
+
+clear_persisted:
+  name: Clear Persisted
+  description: Clear saved coordinates, reset flags and disable the alarm.
+  fields: {}
+
+get_webhook_info:
+  name: Get Webhook Info
+  description: Return webhook URL and token for the entry.
+  fields: {}
+
+toggle_alarm:
+  name: Toggle Alarm
+  description: Toggle the alarm state for the coordinator.
+  fields: {}

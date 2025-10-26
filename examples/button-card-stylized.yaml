@@ -1,0 +1,49 @@
+type: 'custom:button-card'
+entity: sensor.{{ your_entry_id }}_vehicle_status
+name: Vehicle Parking
+show_state: true
+show_icon: true
+styles:
+  card:
+    - padding: 12px
+    - border-radius: 12px
+    - box-shadow: 0 4px 8px rgba(0,0,0,0.12)
+    - background: 'linear-gradient(135deg, var(--card-background-color), #f7fbff)'
+  name:
+    - font-weight: 700
+    - font-size: 14px
+  state:
+    - font-size: 13px
+    - color: var(--secondary-text-color)
+  grid:
+    - grid-template-areas: 'n n'
+    - grid-template-columns: 1fr auto
+    - gap: 6px
+  custom_fields:
+    coords:
+      - font-family: monospace
+      - font-size: 12px
+      - color: var(--secondary-text-color)
+custom_fields:
+  coords: |
+    [[[
+      const a = entity.attributes || {};
+      const lat = a.saved_latitude || '—';
+      const lon = a.saved_longitude || '—';
+      return `${lat}, ${lon}`;
+    ]]]
+tap_action:
+  action: more-info
+hold_action:
+  action: none
+badge:
+  - entity: sensor.{{ your_entry_id }}_vehicle_status
+    attribute: alarm_active
+    name: Alarm
+    template: "alarm_badge"
+
+# templates
+template:
+  alarm_badge:
+    show_indicator: true
+    color: auto

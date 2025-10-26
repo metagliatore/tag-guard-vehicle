@@ -1,0 +1,34 @@
+{
+  "component": {
+    "messages": {
+      "moved_title": "🚨 Fahrzeug bewegt!",
+      "moved_message": "Das Fahrzeug hat sich bewegt! Öffnen: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Alarm per Benachrichtigung deaktiviert",
+      "vehicle_tracker_title": "Fahrzeug-Tracker",
+      "open_map_title": "Karte öffnen",
+      "saved_position_title": "📍 Parkplatz gespeichert",
+      "device_tracker_help": "Wählen Sie den device_tracker, der zur Ermittlung der Fahrzeugposition verwendet wird.",
+      "person_help": "Person, die mit dem Fahrzeug verknüpft ist (für Benachrichtigungen).",
+      "notifier_help": "Wählen Sie den Benachrichtigungsdienst (z. B. mobile_app, telegram).",
+      "tolerance_help": "Toleranzradius in Metern zur Unterscheidung von Bewegung und kleinen GPS-Schwankungen.",
+      "activation_mode_help": "Aktivierungsmodus: connection, position, combined oder manual.",
+      "tag_model_help": "Bluetooth-Tag-Modell – einige Modelle melden Koordinaten unterschiedlich.",
+      "webhook_help": "Optional: eigenes Webhook-Token eingeben oder leer lassen, um eines generieren zu lassen.",
+      "control_title": "Vehicle BT Parking Sentinel — Steuerung",
+      "control_description": "Verwenden Sie die Schaltflächen, um die Sentinelle zu starten/stoppen oder sofort zu speichern.",
+      "start_button": "Start (aktivieren)",
+      "stop_button": "Stopp (deaktivieren)",
+      "save_button": "Jetzt speichern",
+      "saved_coords_label": "Gespeicherte Koordinaten",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "Standorttyp",
+      "last_seen_label": "zuletzt gesehen",
+      "stationary_counter_label": "stationärer Zähler",
+      "alarm_label": "Alarm",
+      "tracker_label": "Tracker",
+      "entity_not_found": "Entität {entity} nicht gefunden",
+      "debug_help": "Aktivieren Sie ausführliche Debug-Logs (nur für Fehlersuche).",
+      "stationary_help": "Stationary-Parameter: wie lange und wie viele Messungen vor dem Speichern als stabil gelten."
+    }
+  }
+}

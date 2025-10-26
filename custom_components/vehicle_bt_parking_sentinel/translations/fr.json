@@ -1,0 +1,34 @@
+{
+  "component": {
+    "messages": {
+      "moved_title": "🚨 Le véhicule a bougé !",
+      "moved_message": "Le véhicule a bougé ! Ouvrir : https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Alarme désactivée via la notification",
+      "vehicle_tracker_title": "Suivi véhicule",
+      "open_map_title": "Ouvrir la carte",
+      "saved_position_title": "📍 Position de stationnement enregistrée",
+      "device_tracker_help": "Sélectionnez le device_tracker utilisé pour détecter la position du véhicule.",
+      "person_help": "Personne associée au véhicule (utilisée pour les notifications).",
+      "notifier_help": "Sélectionnez le service de notification (ex. mobile_app, telegram).",
+      "tolerance_help": "Rayon de tolérance en mètres utilisé pour distinguer déplacement et variations GPS.",
+      "activation_mode_help": "Mode d'activation : connection, position, combined, ou manual.",
+      "tag_model_help": "Modèle de tag Bluetooth – certains modèles rapportent les coordonnées différemment.",
+      "webhook_help": "Optionnel : entrez un token webhook personnalisé ou laissez vide pour en générer un.",
+      "control_title": "Vehicle BT Parking Sentinel — Contrôle",
+      "control_description": "Utilisez les boutons pour démarrer/arrêter la sentinelle ou déclencher une sauvegarde.",
+      "start_button": "Démarrer (activer)",
+      "stop_button": "Arrêter (désactiver)",
+      "save_button": "Sauvegarder maintenant",
+      "saved_coords_label": "Coordonnées sauvegardées",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "type de position",
+      "last_seen_label": "dernier signal",
+      "stationary_counter_label": "compteur stationary",
+      "alarm_label": "alarme",
+      "tracker_label": "Tracker",
+      "entity_not_found": "Entité {entity} introuvable",
+      "debug_help": "Activer les logs détaillés (utile pour le dépannage).",
+      "stationary_help": "Paramètres stationary : durée e numero di campioni da considerare prima di salvare la posizione."
+    }
+  }
+}

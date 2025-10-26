@@ -1,0 +1,7 @@
+{
+  "domain": "vehicle_bt_parking_sentinel",
+  "name": "Vehicle BT Parking Sentinel",
+  "codeowners": ["@metagliatore"],
+  "version": "0.1.0",
+  "config_flow": true
+}

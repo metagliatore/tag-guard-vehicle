@@ -1,0 +1,47 @@
+{
+  "entity": {
+    "sensor": {
+      "vehicle_status": {
+        "state": {
+          "parked": "Parcheggiato (monitoraggio attivo)",
+          "position_saved": "Posizione salvata (non in monitoraggio)",
+          "alarm_triggered": "Allarme attivato",
+          "awaiting_position": "In attesa posizione",
+          "unknown": "Sconosciuto"
+        }
+      }
+    }
+  },
+  "component": {
+    "messages": {
+      "moved_title": "🚨 Veicolo in movimento!",
+      "moved_message": "Il veicolo si è mosso! Apri: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Allarme disattivato tramite notifica",
+      "vehicle_tracker_title": "Tracker veicolo",
+      "open_map_title": "Apri mappa",
+      "saved_position_title": "📍 Posizione parcheggio salvata",
+      "device_tracker_help": "Seleziona il device_tracker usato per rilevare la posizione del veicolo.",
+      "person_help": "Persona associata al veicolo (usata per le notifiche).",
+      "notifier_help": "Seleziona il servizio di notifica (es. mobile_app, telegram).",
+      "tolerance_help": "Raggio in metri usato per distinguere spostamento da piccole variazioni GPS.",
+      "activation_mode_help": "Modalità di attivazione: connection, position, combined, o manual.",
+      "tag_model_help": "Modello del tag Bluetooth – alcuni modelli riportano coordinate in modo differente.",
+      "webhook_help": "Opzionale: inserisci un token webhook personalizzato oppure lascia vuoto per generarne uno.",
+      "control_title": "Vehicle BT Parking Sentinel — Controllo",
+      "control_description": "Usa i pulsanti per avviare/interrompere la sentinella o triggerare un salvataggio.",
+      "start_button": "Avvia (abilita)",
+      "stop_button": "Ferma (disabilita)",
+      "save_button": "Salva posizione ora",
+      "saved_coords_label": "Coordinate salvate",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "tipo posizione",
+      "last_seen_label": "ultimo rilevamento",
+      "stationary_counter_label": "contatore stationary",
+      "alarm_label": "allarme",
+      "tracker_label": "Tracker",
+      "entity_not_found": "Entità {entity} non trovata",
+      "debug_help": "Abilita log dettagliati per il debug (utile per il troubleshooting).",
+      "stationary_help": "Parametri stationary: quanto tempo e quante rilevazioni considerare prima di salvare la posizione."
+    }
+  }
+}

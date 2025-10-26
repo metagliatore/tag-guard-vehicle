@@ -1,0 +1,23 @@
+{
+  "component": {
+    "title": "Vehicle BT Parking Sentinel",
+    "config": {
+      "activation_help": "The 'manual' mode allows manual activation of the sentinel; it is always available and does not require 'stationary' parameters."
+    ,
+      "user_title": "Vehicle BT Parking Sentinel configuration",
+      "user_description": "Select the device_tracker, person entity and activation mode.\nThe 'manual' mode requires manual activation.",
+      "stationary_title": "Stationary parameters",
+      "stationary_description": "Define minutes and the number of repeated reports required before confirming a position.",
+      "show_token_title": "Webhook token",
+      "show_token_description": "Copy the token shown: you will need it to call the webhook that saves position."
+    }
+    ,
+    "messages": {
+      "saved_position_title": "📍 Saved parking position",
+      "saved_position_manual_title": "📍 Saved parking position (manual)",
+      "moved_title": "🚨 Vehicle moved!",
+      "moved_message": "The vehicle has moved! Open: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Alarm disabled via notification"
+    }
+  }
+}

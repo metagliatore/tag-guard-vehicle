@@ -1,0 +1,34 @@
+{
+  "component": {
+    "messages": {
+      "moved_title": "🚨 З транспортним засобом змістилось!",
+      "moved_message": "Транспортний засіб перемістився! Відкрити: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Тривога вимкнена через сповіщення",
+      "vehicle_tracker_title": "Трекер транспортного засобу",
+      "open_map_title": "Відкрити карту",
+      "saved_position_title": "📍 Збережене місце паркування",
+      "device_tracker_help": "Виберіть device_tracker, який використовується для визначення позиції транспортного засобу.",
+      "person_help": "Особа, пов'язана з транспортним засобом (використовується для сповіщень).",
+      "notifier_help": "Виберіть сервіс сповіщень (наприклад, mobile_app, telegram).",
+      "tolerance_help": "Радіус допуску в метрах для визначення переміщення проти невеликих відхилень GPS.",
+      "activation_mode_help": "Режим активації: connection, position, combined або manual.",
+      "tag_model_help": "Модель Bluetooth-мітки – деякі моделі повідомляють координати по-різному.",
+      "webhook_help": "Необов'язково: введіть власний webhook token або залиште порожнім для автоматичної генерації.",
+      "control_title": "Vehicle BT Parking Sentinel — Керування",
+      "control_description": "Використовуйте кнопки для запуску/зупинки або збереження позиції.",
+      "start_button": "Запустити (увімкнути)",
+      "stop_button": "Зупинити (вимкнути)",
+      "save_button": "Зберегти позицію зараз",
+      "saved_coords_label": "Збережені координати",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "тип місцезнаходження",
+      "last_seen_label": "остання поява",
+      "stationary_counter_label": "лічильник stationary",
+      "alarm_label": "тривога",
+      "tracker_label": "Трекер",
+      "entity_not_found": "Сутність {entity} не знайдена",
+      "debug_help": "Увімкнути детальні логи для налагодження (корисно для усунення проблем).",
+      "stationary_help": "Параметри stationary: як довго і скільки зразків вважати стабільною позицією перед збереженням."
+    }
+  }
+}

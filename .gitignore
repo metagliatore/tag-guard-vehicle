@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Pytest cache
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Distribution/build
+build/
+dist/
+*.egg-info/
+
+# Home Assistant local config (do not commit)
+.storage/
+secrets.yaml
+
+# Test artifacts
+pytest-report.html
+
+# Debug files (do not commit)
+debug_stub.csv

@@ -1,0 +1,34 @@
+{
+  "component": {
+    "messages": {
+      "moved_title": "🚨 Транспортное средство переместилось!",
+      "moved_message": "Транспортное средство переместилось! Открыть: https://maps.google.com/?q={lat},{lon}",
+      "alarm_disabled": "Тревога отключена через уведомление",
+      "vehicle_tracker_title": "Трекер транспортного средства",
+      "open_map_title": "Открыть карту",
+      "saved_position_title": "📍 Сохранено место парковки",
+      "device_tracker_help": "Выберите device_tracker, используемый для определения местоположения автомобиля.",
+      "person_help": "Человек, связанный с автомобилем (используется для уведомлений).",
+      "notifier_help": "Выберите сервис уведомлений (например, mobile_app, telegram).",
+      "tolerance_help": "Радиус допуска в метрах для определения перемещения vs. небольших ошибок GPS.",
+      "activation_mode_help": "Режим активации: connection, position, combined или manual.",
+      "tag_model_help": "Модель Bluetooth-метки – некоторые модели сообщают координаты по-разному.",
+      "webhook_help": "Необязательно: введите собственный токен webhook или оставьте пустым для генерации.",
+      "control_title": "Vehicle BT Parking Sentinel — Управление",
+      "control_description": "Используйте кнопки, чтобы запустить/остановить контроль или сохранить позицию.",
+      "start_button": "Запустить (включить)",
+      "stop_button": "Остановить (выключить)",
+      "save_button": "Сохранить позицию сейчас",
+      "saved_coords_label": "Сохраненные координаты",
+      "gps_utc_label": "gpsUtcDt",
+      "location_type_label": "тип расположения",
+      "last_seen_label": "последнее обнаружение",
+      "stationary_counter_label": "счетчик stationary",
+      "alarm_label": "тревога",
+      "tracker_label": "Трекер",
+      "entity_not_found": "Сущность {entity} не найдена",
+      "debug_help": "Включить подробные логи отладки (полезно для устранения неполадок).",
+      "stationary_help": "Параметры stationary: сколько времени и сколько образцов считать перед сохранением как стабильную позицию."
+    }
+  }
+}
