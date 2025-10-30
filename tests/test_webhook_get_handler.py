@@ -32,7 +32,7 @@ async def test_webhook_get_returns_html_control_page():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = False
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -89,7 +89,7 @@ async def test_webhook_get_with_action_query_param_start():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = False
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -113,8 +113,8 @@ async def test_webhook_get_with_action_query_param_start():
 
 
 @pytest.mark.asyncio
-async def test_webhook_get_with_action_query_param_disarm():
-    """Test POST request with action=disarm in JSON body."""
+async def test_webhook_get_with_action_query_param_stop():
+    """Test POST request with action=stop in JSON body."""
     from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
 
     class FakeHass:
@@ -139,17 +139,17 @@ async def test_webhook_get_with_action_query_param_disarm():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = True
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
             pass
 
-    # Create a mock request for POST with action=disarm in JSON body
+    # Create a mock request for POST with action=stop in JSON body
     request = MagicMock(spec=web.Request)
     request.method = "POST"
     request.query = {}
-    request.json = AsyncMock(return_value={"action": "disarm"})
+    request.json = AsyncMock(return_value={"action": "stop"})
 
     coordinator = FakeCoordinator()
     device_tracker = "device.tracker_test"
@@ -157,7 +157,7 @@ async def test_webhook_get_with_action_query_param_disarm():
     # Call the webhook handler
     response = await handle_webhook_impl(coordinator.hass, coordinator, device_tracker, request)
 
-    # Verify alarm was disarmed
+    # Verify alarm was stopped
     assert coordinator.alarm_active is False
     assert response.status == 200
 
@@ -189,7 +189,7 @@ async def test_webhook_post_json_with_action_start():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = False
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -217,8 +217,8 @@ async def test_webhook_post_json_with_action_start():
 
 
 @pytest.mark.asyncio
-async def test_webhook_post_json_with_action_disarm():
-    """Test POST with JSON body containing action=disarm."""
+async def test_webhook_post_json_with_action_stop():
+    """Test POST with JSON body containing action=stop."""
     from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
 
     class FakeHass:
@@ -243,7 +243,7 @@ async def test_webhook_post_json_with_action_disarm():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = True
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -255,7 +255,7 @@ async def test_webhook_post_json_with_action_disarm():
     request.query = {}
 
     async def fake_json():
-        return {"action": "disarm"}
+        return {"action": "stop"}
 
     request.json = fake_json
 
@@ -265,7 +265,7 @@ async def test_webhook_post_json_with_action_disarm():
     # Call the webhook handler
     response = await handle_webhook_impl(coordinator.hass, coordinator, device_tracker, request)
 
-    # Verify alarm was disarmed
+    # Verify alarm was stopped
     assert coordinator.alarm_active is False
     assert response.status == 200
 
@@ -307,7 +307,7 @@ async def test_webhook_post_with_coordinates():
             self.saved_latitude = lat
             self.saved_longitude = lon
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -375,7 +375,7 @@ async def test_webhook_post_without_coordinates_uses_device_tracker():
             self.saved_latitude = lat
             self.saved_longitude = lon
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):
@@ -430,7 +430,7 @@ async def test_webhook_html_page_structure():
             self.config = {"device_tracker": "device.tracker_test"}
             self.alarm_active = True
 
-        async def set_alarm_active(self, active):
+        async def set_alarm_active(self, active, activation_time=None, notify_waiting=False):
             self.alarm_active = active
 
         async def async_save(self):

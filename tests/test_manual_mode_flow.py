@@ -3,7 +3,7 @@
 Verifies:
 1. Manual mode starts with alarm_active=False even if storage has alarm_active=True
 2. Webhook START command enables alarm
-3. Webhook DISARM command disables alarm
+3. Webhook STOP command disables alarm
 4. Webhook SAVE command saves position
 5. State transitions are logged correctly
 """
@@ -73,7 +73,7 @@ def test_webhook_start_enables_alarm():
             self.config = {"options": {}}
             self.hass = FakeHass()
         
-        async def set_alarm_active(self, value):
+        async def set_alarm_active(self, value, activation_time=None, notify_waiting=False):
             self.alarm_active = value
         
         async def async_save(self):
@@ -100,8 +100,8 @@ def test_webhook_start_enables_alarm():
     assert coordinator.alarm_active is True
 
 
-def test_webhook_disarm_disables_alarm():
-    """Test that webhook DISARM command disables alarm."""
+def test_webhook_stop_disables_alarm():
+    """Test that webhook STOP command disables alarm."""
     from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
     
     class FakeHass:
@@ -115,7 +115,7 @@ def test_webhook_disarm_disables_alarm():
             self.config = {"options": {}}
             self.hass = FakeHass()
         
-        async def set_alarm_active(self, value):
+        async def set_alarm_active(self, value, activation_time=None, notify_waiting=False):
             self.alarm_active = value
         
         async def async_save(self):
@@ -132,7 +132,7 @@ def test_webhook_disarm_disables_alarm():
             return {"action": self._action}
     
     coordinator = FakeCoordinator()
-    request = FakeRequest("disarm")
+    request = FakeRequest("stop")
     
     response = asyncio.run(handle_webhook_impl(
         coordinator.hass, coordinator, "device_tracker.test", request
@@ -198,7 +198,7 @@ def test_webhook_save_stores_position():
 
 
 def test_manual_mode_full_flow():
-    """Test complete manual mode flow: load -> save -> start -> disarm."""
+    """Test complete manual mode flow: load -> save -> start -> stop."""
     from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
     
     class FakeHass:

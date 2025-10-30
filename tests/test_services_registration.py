@@ -62,15 +62,17 @@ class DummyCoordinator:
 
 
 @pytest.mark.asyncio
-# Test: async_register_services registers save/reset/manual services
+# Test: async_register_services registers save/reset/clear/mute/unmute services
 async def test_async_register_services_registers():
     hass = FakeHass()
     coord = DummyCoordinator()
     await services.async_register_services(hass, coord, "device.tracker_1", "notify.test")
-    # check that 3 services registered
+    # check that services are registered (manual_trigger was removed - use start with notify_waiting instead)
     assert ("vehicle_bt_parking_sentinel", "save_position") in hass.services._registry
     assert ("vehicle_bt_parking_sentinel", "reset_flags") in hass.services._registry
-    assert ("vehicle_bt_parking_sentinel", "manual_trigger") in hass.services._registry
+    assert ("vehicle_bt_parking_sentinel", "clear_persisted") in hass.services._registry
+    assert ("vehicle_bt_parking_sentinel", "mute_notifications") in hass.services._registry
+    assert ("vehicle_bt_parking_sentinel", "unmute_notifications") in hass.services._registry
 
 
 @pytest.mark.asyncio

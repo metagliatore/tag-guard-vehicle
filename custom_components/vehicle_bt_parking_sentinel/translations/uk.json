@@ -2,7 +2,11 @@
   "component": {
     "messages": {
       "moved_title": "🚨 З транспортним засобом змістилось!",
-      "moved_message": "Транспортний засіб перемістився! Відкрити: https://maps.google.com/?q={lat},{lon}",
+      "moved_message": "⚠️ Виявлено переміщення на {distance}м від збереженої позиції!\n\n📍 Збережена позиція:\n{saved_url}\n\n📍 Поточна позиція:\n{current_url}",
+      "monitoring_activated_title": "🟢 Моніторинг активовано",
+      "monitoring_activated_message": "Тривога активна. Моніторинг поточної позиції.\n📍 {map_url}",
+      "position_saved_title": "📍 Позицію збережено",
+      "position_saved_message": "Місце паркування збережено.\n📍 {map_url}",
       "alarm_disabled": "Тривога вимкнена через сповіщення",
       "vehicle_tracker_title": "Трекер транспортного засобу",
       "open_map_title": "Відкрити карту",

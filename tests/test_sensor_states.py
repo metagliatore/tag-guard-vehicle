@@ -78,7 +78,7 @@ async def test_sensor_states_and_attributes():
     await sensor.async_update()
     assert sensor.state == "alarm_triggered"
     
-    # disarm alarm -> position_saved
+    # stop alarm -> position_saved
     coord.alarm_active = False
     coord.position_notified = False
     await sensor.async_update()

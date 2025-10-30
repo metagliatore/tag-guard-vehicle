@@ -52,8 +52,12 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
     Behavior:
     - POST: expects JSON payload; action may be present in JSON.
     - GET: returns a small HTML control page with buttons to POST actions.
-    - Actions supported: start, disarm, mute, unmute, save.
+    - Actions supported: start, stop, mute, unmute, save.
     - Token may be provided via header 'X-Integration-Token' or query param 'token'.
+    
+    Action 'start' accepts optional parameter:
+    - notify_waiting (bool): Send notification if waiting for fresh GPS position
+      Example: {"action": "start", "notify_waiting": true}
     
     NOTE: coordinator parameter may be stale if integration was reloaded.
     We try to fetch the latest coordinator from hass.data if available.
@@ -139,11 +143,17 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
 
         if a == "start":
             # Enable alarm monitoring
+            # Extract optional notify_waiting parameter from JSON payload
             try:
-                _LOGGER.info("Processing START action - setting alarm_active=True")
-                await coordinator.set_alarm_active(True)
+                notify_waiting = data.get("notify_waiting", False) if isinstance(data, dict) else False
+                # Convert string "true"/"false" to boolean if needed
+                if isinstance(notify_waiting, str):
+                    notify_waiting = notify_waiting.lower() in ("true", "1", "yes")
+                
+                _LOGGER.info("Processing START action - setting alarm_active=True, notify_waiting=%s", notify_waiting)
+                await coordinator.set_alarm_active(True, notify_waiting=notify_waiting)
                 _LOGGER.info("START action completed - alarm_active=%s", coordinator.alarm_active)
-                return web.json_response({"status": "started", "alarm_active": True}, status=200)
+                return web.json_response({"status": "started", "alarm_active": True, "notify_waiting": notify_waiting}, status=200)
             except Exception:
                 _LOGGER.exception("Failed to enable alarm via webhook action")
                 return web.json_response({"status": "error"}, status=500)
@@ -165,14 +175,14 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
                 _LOGGER.exception("Failed to mute notifications via webhook action")
                 return web.json_response({"status": "error"}, status=500)
 
-        if a == "disarm":
+        if a == "stop":
             # Completely disable alarm monitoring
             try:
-                _LOGGER.info("Processing DISARM action - setting alarm_active=False")
+                _LOGGER.info("Processing STOP action - setting alarm_active=False")
                 await coordinator.set_alarm_active(False)
-                _LOGGER.info("DISARM action completed - alarm_active=%s", coordinator.alarm_active)
+                _LOGGER.info("STOP action completed - alarm_active=%s", coordinator.alarm_active)
                 return web.json_response({
-                    "status": "disarmed", 
+                    "status": "stopped", 
                     "alarm_active": False,
                     "message": "Alarm disabled. Monitoring stopped."
                 }, status=200)
@@ -217,7 +227,7 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
                 return web.json_response({"status": "error"}, status=500)
     # If we reach here there was no explicit action provided
     return web.json_response(
-        {"status": "no_action", "message": "Provide action: start|disarm|mute|unmute|save"},
+        {"status": "no_action", "message": "Provide action: start|stop|mute|unmute|save"},
         status=400,
     )
 
@@ -268,68 +278,6 @@ async def async_register_services(hass, coordinator, device_tracker_entity: str,
         except Exception:
             _LOGGER.exception("Failed to clear persisted data for coordinator")
 
-    async def async_manual_trigger(call):
-        """Manual trigger: quick activation of monitoring (save current position + enable alarm).
-        
-        This service works in ALL activation modes, not just 'manual' mode. It provides
-        a way to manually force a save and enable the alarm, regardless of the configured
-        activation mode logic.
-        
-        The save respects the timestamp freshness check: if the current gpsUtcDt is
-        newer than the activation time, the position is saved immediately. Otherwise,
-        the coordinator sets _awaiting_activation_save and will save when a fresh
-        GPS reading arrives.
-        
-        Does NOT accept custom coordinates in the payload.
-        """
-        from datetime import datetime
-        activation_time = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        
-        # Force a save attempt regardless of current alarm state
-        # First, try to save if GPS is fresh
-        device_entity = coordinator.config.get("device_tracker")
-        saved = False
-        
-        if device_entity:
-            state = hass.states.get(device_entity)
-            if state:
-                try:
-                    from .utils import extract_coords_from_ops_attrs_by_model, safe_get
-                    
-                    ops = state.attributes.get("ops") or []
-                    last_op = ops[0] if isinstance(ops, (list, tuple)) and len(ops) > 0 else {}
-                    lat, lon = extract_coords_from_ops_attrs_by_model(coordinator.config.get("tag_model"), last_op, state.attributes)
-                    gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or state.attributes.get("gpsUtcDt")
-                    
-                    # Check if GPS is fresh
-                    if gpsUtcDt and str(gpsUtcDt).isdigit() and int(str(gpsUtcDt)) > int(str(activation_time)):
-                        if lat is not None and lon is not None:
-                            await coordinator._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=None, last_seen=state.attributes.get("last_seen"), reason="start")
-                            saved = True
-                except Exception:
-                    _LOGGER.exception("Error while attempting save in manual_trigger")
-        
-        # Set awaiting flag if we didn't save
-        if not saved:
-            coordinator._awaiting_activation_save = True
-            coordinator._activation_time_str = activation_time
-            _LOGGER.debug("manual_trigger: awaiting fresh GPS (activation_time=%s)", activation_time)
-        
-        # Enable alarm (even if already enabled, this ensures it's on)
-        coordinator.alarm_active = True
-        await coordinator.async_save()
-        
-        # Notification is handled by _async_save_position (with reason="start") if GPS was saved
-        # If we're still awaiting GPS, notify user to wait
-        if getattr(coordinator, '_awaiting_activation_save', False) and notifier:
-            try:
-                from .utils import translate
-                title = await translate(hass, "messages.manual_trigger_awaiting_title", "⏳ Parking sentinel activating...")
-                message = await translate(hass, "messages.manual_trigger_awaiting_message", "Waiting for fresh GPS position to save parking location.")
-                await _notify(hass, notifier, title, message)
-            except Exception:
-                await _notify(hass, notifier, "⏳ Parking sentinel", "Waiting for GPS position...")
-
     async def async_mute_notifications(call=None):
         """Mute notifications but keep monitoring active."""
         coordinator.position_notified = True
@@ -344,7 +292,6 @@ async def async_register_services(hass, coordinator, device_tracker_entity: str,
 
     hass.services.async_register("vehicle_bt_parking_sentinel", "save_position", async_save_position)
     hass.services.async_register("vehicle_bt_parking_sentinel", "reset_flags", async_reset_flags)
-    hass.services.async_register("vehicle_bt_parking_sentinel", "manual_trigger", async_manual_trigger)
     hass.services.async_register("vehicle_bt_parking_sentinel", "clear_persisted", async_clear_persisted)
     hass.services.async_register("vehicle_bt_parking_sentinel", "mute_notifications", async_mute_notifications)
     hass.services.async_register("vehicle_bt_parking_sentinel", "unmute_notifications", async_unmute_notifications)
@@ -403,7 +350,9 @@ async def async_register_webhook_and_listeners(hass, coordinator, device_tracker
             # schedule module-level processor
             hass.async_create_task(process_mobile_action(coordinator, data))
 
-        hass.bus.async_listen("mobile_app_notification_action", _handle_action)
+        # Store the unsubscribe function in coordinator for cleanup on unload
+        unsub_mobile_action = hass.bus.async_listen("mobile_app_notification_action", _handle_action)
+        coordinator._unsub_mobile_action = unsub_mobile_action
         _LOGGER.info("Registered mobile_app_notification_action listener")
         
     except ValueError:
@@ -425,9 +374,23 @@ async def async_register_helper_services(hass, coordinator, entry_id: str, token
         return info
 
     async def start_alarm(call=None):
-        """Start/enable the parking sentinel alarm monitoring."""
-        await coordinator.set_alarm_active(True)
-        _LOGGER.info("Started alarm for %s (alarm_active=True)", entry_id)
+        """Start/enable the parking sentinel alarm monitoring.
+        
+        Accepts optional 'notify_waiting' parameter (bool) to send user notification
+        if we're waiting for fresh GPS position.
+        
+        Example:
+            service: vehicle_bt_parking_sentinel.start
+            data:
+              notify_waiting: true
+        """
+        # Extract notify_waiting from call data (default: False for backward compatibility)
+        notify_waiting = False
+        if call and hasattr(call, 'data'):
+            notify_waiting = call.data.get('notify_waiting', False)
+        
+        await coordinator.set_alarm_active(True, notify_waiting=notify_waiting)
+        _LOGGER.info("Started alarm for %s (alarm_active=True, notify_waiting=%s)", entry_id, notify_waiting)
         return {"status": "ok", "alarm_active": True}
     
     async def stop_alarm(call=None):

@@ -190,8 +190,8 @@ async def test_handle_device_event_movement_detection():
     assert coord.position_notified is True
     assert len(hass.services.calls) > 0
     assert hass.services.calls[0][0] == "notify"
-    # Service name includes the notify prefix
-    assert hass.services.calls[0][1] == "notify.test"
+    # Service name without the notify prefix (it gets stripped by _notify_movement)
+    assert hass.services.calls[0][1] == "test"
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
-"""Unit tests for service handlers (save_position, manual_trigger, reset_flags).
+"""Unit tests for service handlers (save_position, start, reset_flags).
+Note: manual_trigger was removed - use start with notify_waiting parameter instead.
 """
 
 import asyncio

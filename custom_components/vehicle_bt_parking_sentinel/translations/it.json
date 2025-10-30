@@ -15,7 +15,11 @@
   "component": {
     "messages": {
       "moved_title": "🚨 Veicolo in movimento!",
-      "moved_message": "Il veicolo si è mosso! Apri: https://maps.google.com/?q={lat},{lon}",
+      "moved_message": "⚠️ Rilevato spostamento di {distance}m dalla posizione salvata!\n\n📍 Posizione salvata:\n{saved_url}\n\n📍 Posizione attuale:\n{current_url}",
+      "monitoring_activated_title": "🟢 Monitoraggio attivato",
+      "monitoring_activated_message": "Allarme attivo. Monitoraggio posizione corrente.\n📍 {map_url}",
+      "position_saved_title": "📍 Posizione salvata",
+      "position_saved_message": "Posizione parcheggio memorizzata.\n📍 {map_url}",
       "alarm_disabled": "Allarme disattivato tramite notifica",
       "vehicle_tracker_title": "Tracker veicolo",
       "open_map_title": "Apri mappa",

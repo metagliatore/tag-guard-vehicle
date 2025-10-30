@@ -41,9 +41,9 @@ def test_handle_webhook_impl_get_returns_html():
     assert "button" in text and "start" in text.lower()
 
 
-def test_manual_trigger_fallback_to_tracker():
-    """Test that manual_trigger reads from device_tracker and enables alarm."""
-    from custom_components.vehicle_bt_parking_sentinel.services import async_register_services
+def test_start_reads_from_tracker():
+    """Test that start service reads from device_tracker and enables alarm."""
+    from custom_components.vehicle_bt_parking_sentinel.services import async_register_helper_services
     from datetime import datetime
 
     class FakeHass:
@@ -85,7 +85,7 @@ def test_manual_trigger_fallback_to_tracker():
             self._awaiting_activation_save = False
             self._activation_time_str = None
 
-        async def set_alarm_active(self, v: bool, activation_time=None):
+        async def set_alarm_active(self, v: bool, activation_time=None, notify_waiting=False):
             """Simplified set_alarm_active that reads device_tracker and saves if GPS is fresh."""
             self.alarm_active = bool(v)
             await self.async_save()
@@ -125,20 +125,21 @@ def test_manual_trigger_fallback_to_tracker():
     hass = FakeHass(states_map={"device.tracker_x": state})
     coord = DummyCoordinator(hass, {"device_tracker": "device.tracker_x", "tag_model": "SmartTag"})
 
-    # register services
-    asyncio.run(async_register_services(hass, coord, "device.tracker_x", None))
+    # register helper services (includes start)
+    asyncio.run(async_register_helper_services(hass, coord, "entry_test", "token123"))
 
-    # Get manual_trigger function
-    func = hass._registered_services.get(("vehicle_bt_parking_sentinel", "manual_trigger"))
+    # Get start function
+    func = hass._registered_services.get(("vehicle_bt_parking_sentinel", "start"))
     
     # create a dummy call object with .data attribute
     class Call:
         def __init__(self, data=None):
             self.data = data or {}
 
+    # Call start (equivalent to old manual_trigger)
     asyncio.run(func(Call()))
     
-    # manual_trigger should have:
+    # start service should have:
     # 1. Saved the position from device_tracker
     assert coord.saved_latitude == 7.7
     assert coord.saved_longitude == 8.8

@@ -2,7 +2,11 @@
   "component": {
     "messages": {
       "moved_title": "🚨 Fahrzeug bewegt!",
-      "moved_message": "Das Fahrzeug hat sich bewegt! Öffnen: https://maps.google.com/?q={lat},{lon}",
+      "moved_message": "⚠️ Bewegung von {distance}m von gespeicherter Position erkannt!\n\n📍 Gespeicherte Position:\n{saved_url}\n\n📍 Aktuelle Position:\n{current_url}",
+      "monitoring_activated_title": "🟢 Überwachung aktiviert",
+      "monitoring_activated_message": "Alarm aktiv. Überwachung der aktuellen Position.\n📍 {map_url}",
+      "position_saved_title": "📍 Position gespeichert",
+      "position_saved_message": "Parkposition gespeichert.\n📍 {map_url}",
       "alarm_disabled": "Alarm per Benachrichtigung deaktiviert",
       "vehicle_tracker_title": "Fahrzeug-Tracker",
       "open_map_title": "Karte öffnen",

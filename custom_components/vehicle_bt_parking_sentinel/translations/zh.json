@@ -2,7 +2,11 @@
   "component": {
     "messages": {
       "moved_title": "🚨 车辆移动了！",
-      "moved_message": "车辆已移动！打开: https://maps.google.com/?q={lat},{lon}",
+      "moved_message": "⚠️ 检测到从保存位置移动了 {distance}米！\n\n📍 保存的位置：\n{saved_url}\n\n📍 当前位置：\n{current_url}",
+      "monitoring_activated_title": "🟢 监控已激活",
+      "monitoring_activated_message": "警报激活。监控当前位置。\n📍 {map_url}",
+      "position_saved_title": "📍 位置已保存",
+      "position_saved_message": "停车位置已保存。\n📍 {map_url}",
       "alarm_disabled": "通过通知已禁用警报",
       "vehicle_tracker_title": "车辆追踪器",
       "open_map_title": "打开地图",

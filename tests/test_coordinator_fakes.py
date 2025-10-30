@@ -118,8 +118,11 @@ async def test_movement_triggers_notify(monkeypatch):
     new_state = FakeState({"latitude": 45.01, "longitude": 9.0})
     ev = DummyEvent("device.tracker_1", new_state)
     await coord._handle_device_event(ev)
-    # notify should have been called on hass.services
-    assert any(call[0] == "notify" for call in hass.services.calls)
+    # _notify_movement should have been called with the coordinates
+    assert 'lat' in called
+    assert 'lon' in called
+    assert called['lat'] == 45.01
+    assert called['lon'] == 9.0
 
 
 @pytest.mark.asyncio

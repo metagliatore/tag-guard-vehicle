@@ -4,8 +4,13 @@ Home Assistant integration to monitor and protect your vehicle using a Bluetooth
 
 ## 📑 Table of Contents
 - [Quick Start](#quick-start)
-- [Activation Modes](#activation-modes)
-  - [Practical Examples](#practical-examples)
+- [Activation Modes](#activation-mo**State transitions:**
+- `parked` / `alarm_triggered` → `position_saved`
+- If no position saved → `unknown`
+
+**Note:** Previously called `disarm` - renamed to `stop` for clarity.
+
+#### 🔇 **mute** - Silence Notifications (Keep Monitoring)  - [Practical Examples](#practical-examples)
 - [Sensor States](#sensor-states)
 - [Features](#features)
 - [Webhook API](#webhook-api)
@@ -34,8 +39,9 @@ After setup, test the integration:
 
 ```yaml
 # Developer Tools → Services
-service: vehicle_bt_parking_sentinel.manual_trigger
-data: {}
+service: vehicle_bt_parking_sentinel.start
+data:
+  notify_waiting: true  # Optional: get notification if waiting for GPS
 ```
 
 Check the sensor: `sensor.<entry_id>_vehicle_status` should show:
@@ -51,9 +57,11 @@ The integration supports several activation modes (option `activation_mode`). **
 - **`connection`** — Saves position and enables monitoring immediately when the `device_tracker` disconnects (fast, does not use stationary checks).
 - **`position`** — Monitors reported coordinates and uses stationary checks (`stationary_minutes` + `stationary_count`) to confirm a stable position before saving and enabling monitoring.
 - **`combined`** — Requires both a disconnect event AND stationary confirmation before saving and enabling monitoring (recommended for fewer false positives).
-- **`manual`** — No automatic triggers; only manual activation via the `manual_trigger` service or UI.
+- **`manual`** — No automatic triggers; only manual activation via the `start` service or webhook.
 
-**Important**: The `manual_trigger` service is available in ALL modes, not just `manual` mode. It provides a quick way to manually save position and enable monitoring regardless of the configured activation mode. In `manual` mode, it's the only way to activate monitoring; in other modes, it acts as an additional manual override.
+**Important**: The `start` service is available in ALL modes, not just `manual` mode. It provides a quick way to manually save position and enable monitoring regardless of the configured activation mode. In `manual` mode, it's the only way to activate monitoring; in other modes, it acts as an additional manual override.
+
+**Advanced**: The `start` service accepts an optional `notify_waiting: true` parameter to receive a notification if the system is waiting for a fresh GPS position (useful for manual UI triggers).
 
 **In all modes**, once the position is saved and monitoring is enabled, the integration will send a notification if the vehicle moves beyond the configured `tolerance_radius`.
 
@@ -82,8 +90,9 @@ automation:
         entity_id: input_button.park_vehicle
         # Or use: platform: event with mobile app notification action
     action:
-      - service: vehicle_bt_parking_sentinel.manual_trigger
-        data: {}
+      - service: vehicle_bt_parking_sentinel.start
+        data:
+          notify_waiting: true  # Get notification if waiting for GPS
 ```
 
 This will:
@@ -120,7 +129,7 @@ curl -X POST -d '{"action":"stop"}' https://your-ha.com/api/webhook/<token>
 ```
 
 #### Example 5: Manual override in `combined` mode
-Even when using `combined` mode for automatic activation, you can force immediate activation using `manual_trigger`:
+Even when using `combined` mode for automatic activation, you can force immediate activation using `start`:
 
 ```yaml
 automation:
@@ -131,8 +140,9 @@ automation:
         event_data:
           action: force_park
     action:
-      - service: vehicle_bt_parking_sentinel.manual_trigger
-        data: {}
+      - service: vehicle_bt_parking_sentinel.start
+        data:
+          notify_waiting: true  # Optional: notify if waiting for GPS
 ```
 
 This is useful when:
@@ -249,7 +259,7 @@ unknown
 - Stationary detection (`stationary_minutes`, `stationary_count`) to avoid saving transient locations.
 - Notification support via a configured `notify` service (includes Google Maps link).
 - Webhook support: wizard can auto-generate a `webhook_token` and shows the full webhook URL.
-- Helper services: `save_position`, `reset_flags`, `manual_trigger`, `toggle_alarm`, `get_webhook_info`.
+- Helper services: `start`, `stop`, `save_position`, `reset_flags`, `clear_persisted`, `mute_notifications`, `unmute_notifications`, `get_webhook_info`.
 - Lovelace support: sensor `sensor.<entry_id>_vehicle_status` exposes state and attributes; an example custom card and a styled `custom:button-card` are included.
 
 ## Webhook API
@@ -291,16 +301,27 @@ curl -X POST \
   https://YOUR_HA_IP:8123/api/webhook/<YOUR_WEBHOOK_TOKEN>
 ```
 
+**Optional parameter `notify_waiting`** (boolean): Send notification if GPS is stale.
+
+```bash
+# With notification if waiting for GPS
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"action":"start", "notify_waiting":true}' \
+  https://YOUR_HA_IP:8123/api/webhook/<YOUR_WEBHOOK_TOKEN>
+```
+
 **Response:**
 ```json
-{"status":"started","alarm_active":true}
+{"status":"started","alarm_active":true,"notify_waiting":false}
 ```
 
 **Behavior:**
 - Activates alarm monitoring
 - Saves position ONLY if GPS timestamp is fresh (newer than activation time)
 - If GPS is stale, sets `awaiting_activation_save = true` and waits for next GPS update
-- Sends notification "🟢 Monitoraggio attivato" when position is saved
+- Sends notification "🟢 Monitoring activated" when position is saved
+- If `notify_waiting:true` and GPS is stale, sends "⏳ Waiting for GPS position..." notification
 
 **State transitions:**
 - `unknown` → `awaiting_position` (then → `parked` when GPS arrives)
@@ -310,6 +331,7 @@ curl -X POST \
 - In **manual mode** with parked vehicle, GPS may be stale
 - `start` alone may NOT save position immediately
 - **Recommended sequence for manual mode**: `save` → `start` (see below)
+- Use `notify_waiting:true` to get immediate feedback if waiting for GPS
 
 #### 💾 **save** - Save Position Immediately
 Force-saves current position from device_tracker (always, regardless of GPS timestamp).
@@ -327,7 +349,7 @@ curl -X POST -d '{"action":"save"}' \
 **Behavior:**
 - Always saves position from device_tracker (regardless of GPS timestamp)
 - Does NOT change alarm state
-- Sends notification "📍 Posizione salvata"
+- Sends notification "📍 Position saved"
 
 **State transitions:**
 - `unknown` → `position_saved` (if alarm not active)
@@ -346,16 +368,16 @@ curl -X POST -d '{"action":"save"}' https://.../<token>
 curl -X POST -d '{"action":"start"}' https://.../<token>
 ```
 
-#### 🔴 **disarm** - Disable Monitoring
+#### 🔴 **stop** - Disable Monitoring
 Completely stops monitoring and disables alarm.
 
 ```bash
-curl -X POST -d '{"action":"disarm"}' https://.../<token>
+curl -X POST -d '{"action":"stop"}' https://.../<token>
 ```
 
 **Response:**
 ```json
-{"status":"disarmed","alarm_active":false,"message":"Alarm disabled. Monitoring stopped."}
+{"status":"stopped","alarm_active":false,"message":"Alarm disabled. Monitoring stopped."}
 ```
 
 **Behavior:**
@@ -415,9 +437,9 @@ curl -X POST -d '{"action":"unmute"}' https://.../<token>
 
 | Action | Effect | Alarm Active | Saves Position | Sends Notification | State Transition |
 |--------|--------|--------------|----------------|-------------------|------------------|
-| `start` | Enable monitoring | ✅ Yes | ⚠️ If GPS fresh | ✅ "🟢 Monitoraggio attivato" | → `awaiting_position` or `parked` |
-| `save` | Save current position | (unchanged) | ✅ Always | ✅ "📍 Posizione salvata" | → `position_saved` (if alarm off) |
-| `disarm` | Disable monitoring | ❌ No | ❌ No | ❌ Silent | → `position_saved` or `unknown` |
+| `start` | Enable monitoring | ✅ Yes | ⚠️ If GPS fresh | ✅ "Monitoring activated" | → `awaiting_position` or `parked` |
+| `save` | Save current position | (unchanged) | ✅ Always | ✅ "Position saved" | → `position_saved` (if alarm off) |
+| `stop` | Disable monitoring | ❌ No | ❌ No | ❌ Silent | → `position_saved` or `unknown` |
 | `mute` | Silence alerts only | ✅ Yes | ❌ No | ❌ No | Stays in current state |
 | `unmute` | Re-enable alerts | ✅ Yes | ❌ No | ❌ No | `alarm_triggered` → `parked` |
 
@@ -425,25 +447,25 @@ curl -X POST -d '{"action":"unmute"}' https://.../<token>
 
 ### Notification Messages
 
-The integration sends **context-specific notifications** in Italian:
+The integration sends **context-specific notifications** (localized based on your Home Assistant language):
 
 | Event | Notification | Content |
 |-------|-------------|---------|
-| Position saved (`save` action) | 📍 Posizione salvata | "Posizione parcheggio memorizzata." + map link |
-| Monitoring started (`start` action) | 🟢 Monitoraggio attivato | "Allarme attivo. Monitoraggio posizione corrente." + map link |
-| Movement detected | 🚨 Veicolo in movimento! | Distance + saved position link + current position link |
-| Alarm disabled (`disarm` action) | — | No notification (silent) |
+| Position saved (`save` action) | 📍 Position saved | "Parking position saved." + map link |
+| Monitoring started (`start` action) | 🟢 Monitoring activated | "Alarm active. Monitoring current position." + map link |
+| Movement detected | 🚨 Vehicle moved! | Distance + saved position link + current position link |
+| Alarm disabled (`stop` action) | — | No notification (silent) |
 
 **Example movement notification:**
 ```
-🚨 Veicolo in movimento!
+🚨 Vehicle moved!
 
-⚠️ Rilevato spostamento di 250m dalla posizione salvata!
+⚠️ Detected movement of 250m from saved position!
 
-📍 Posizione salvata:
+📍 Saved position:
 https://maps.google.com/?q=45.507,9.249
 
-📍 Posizione attuale:
+📍 Current position:
 https://maps.google.com/?q=45.510,9.252
 ```
 
@@ -452,20 +474,33 @@ https://maps.google.com/?q=45.510,9.252
 ## Services
 Services are exposed under the domain `vehicle_bt_parking_sentinel`:
 
-- **`manual_trigger`** — Quick activation shortcut. Saves current `device_tracker` position (if GPS is fresh) and enables monitoring. Available in ALL modes as a manual override. Does NOT accept custom coordinates.
+- **`start`** — Enable alarm monitoring. Saves current `device_tracker` position (if GPS is fresh) and activates monitoring. Accepts optional `notify_waiting: true` parameter to send a notification if waiting for fresh GPS position.
+- **`stop`** — Disable alarm monitoring completely (same as webhook `stop` action).
 - **`save_position`** — Force-save the current tracker position (always, regardless of GPS timestamp) without changing alarm state.
 - **`reset_flags`** — Reset notification flags (`position_notified = False`) to allow movement notifications again.
 - **`clear_persisted`** — Full reset: clear saved coordinates, reset flags, disable alarm (returns to `unknown` state).
-- **`toggle_alarm`** — Manually toggle the alarm state on/off.
 - **`get_webhook_info`** — Return webhook URL and token info for the entry.
 - **`mute_notifications`** — Silence notifications but keep monitoring active (sets `position_notified = True`).
 - **`unmute_notifications`** — Re-enable notifications (sets `position_notified = False`).
 
 ### Service Examples
 
-**Manually activate monitoring:**
+**Activate monitoring (silent mode for automations):**
 ```yaml
-service: vehicle_bt_parking_sentinel.manual_trigger
+service: vehicle_bt_parking_sentinel.start
+data: {}
+```
+
+**Activate monitoring with feedback (for manual UI buttons):**
+```yaml
+service: vehicle_bt_parking_sentinel.start
+data:
+  notify_waiting: true  # Get notified if waiting for GPS
+```
+
+**Stop monitoring:**
+```yaml
+service: vehicle_bt_parking_sentinel.stop
 data: {}
 ```
 
@@ -493,13 +528,13 @@ data: {}
 
 ### Start with Fresh vs Stale GPS
 
-When you activate monitoring (via `start` webhook or `manual_trigger` service):
+When you activate monitoring (via `start` webhook or `start` service):
 
 **If GPS timestamp is fresh** (newer than activation time):
 - ✅ Position saved immediately
 - ✅ Alarm activated
 - ✅ State becomes `parked`
-- ✅ Notification "🟢 Monitoraggio attivato" sent
+- ✅ Notification "🟢 Monitoring activated" sent
 - ✅ Monitoring starts immediately
 
 **If GPS timestamp is stale** (older than activation time):
@@ -529,7 +564,7 @@ sensor.vehicle_status:
 **What happens next:**
 - When device_tracker reports new GPS → position automatically saved
 - State changes to `parked`
-- Notification "🟢 Monitoraggio attivato" sent
+- Notification "🟢 Monitoring activated" sent
 - Monitoring begins
 
 ### Immediate State Updates
@@ -601,7 +636,9 @@ automation:
         event_data:
           action: bike_parked
     action:
-      - service: vehicle_bt_parking_sentinel.manual_trigger
+      - service: vehicle_bt_parking_sentinel.start
+        data:
+          notify_waiting: true
 ```
 
 #### 🏍️ **Remote Parking (Garage/Storage)** (Recommended: `connection` mode)
@@ -690,7 +727,9 @@ automation:
         entity_id: device_tracker.smarttag
         state: "disconnected"
     action:
-      - service: vehicle_bt_parking_sentinel.manual_trigger
+      - service: vehicle_bt_parking_sentinel.start
+        data:
+          notify_waiting: true
 ```
 
 
@@ -742,9 +781,16 @@ Look for keywords:
 
 ### Quick Tests (Developer Tools → Services)
 
-**Test manual activation:**
+**Test activation (silent mode):**
 ```yaml
-service: vehicle_bt_parking_sentinel.manual_trigger
+service: vehicle_bt_parking_sentinel.start
+```
+
+**Test activation (with feedback):**
+```yaml
+service: vehicle_bt_parking_sentinel.start
+data:
+  notify_waiting: true
 ```
 
 **Reset everything:**

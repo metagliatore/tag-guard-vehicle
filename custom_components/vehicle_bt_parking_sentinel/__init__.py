@@ -125,11 +125,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info("Unloading Vehicle BT Parking Sentinel config entry")
+    _LOGGER.info("Unloading Vehicle BT Parking Sentinel config entry: %s", entry.entry_id)
+    
+    # Get coordinator before removing from hass.data
+    coordinator_key = entry.entry_id + "_coordinator"
+    coordinator = hass.data.get(DOMAIN, {}).get(coordinator_key)
+    
+    # Stop coordinator (unsubscribe from device_tracker events)
+    if coordinator:
+        _LOGGER.debug("Stopping coordinator for entry: %s", entry.entry_id)
+        await coordinator.async_stop()
+    
+    # Unregister webhook
+    from homeassistant.components import webhook
+    from .const import CONF_WEBHOOK_TOKEN, DEFAULT_WEBHOOK_ID
+    
+    # Get webhook token from config
+    options = entry.options or {}
+    webhook_id = options.get(CONF_WEBHOOK_TOKEN) or entry.data.get(CONF_WEBHOOK_TOKEN) or DEFAULT_WEBHOOK_ID
+    
+    try:
+        webhook.async_unregister(hass, webhook_id)
+        _LOGGER.info("Unregistered webhook: %s", webhook_id)
+    except Exception as e:
+        _LOGGER.debug("Could not unregister webhook %s: %s (may not exist)", webhook_id, e)
+    
+    # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    
+    # Remove from hass.data
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        # Remove all data for this entry
+        if DOMAIN in hass.data:
+            hass.data[DOMAIN].pop(entry.entry_id, None)
+            hass.data[DOMAIN].pop(coordinator_key, None)
+            _LOGGER.debug("Removed entry data from hass.data: %s", entry.entry_id)
+            
+            # If no more entries, clean up domain data
+            if not hass.data[DOMAIN]:
+                hass.data.pop(DOMAIN)
+                _LOGGER.debug("Removed empty DOMAIN from hass.data")
 
+    _LOGGER.info("Unload complete for entry: %s, success: %s", entry.entry_id, unload_ok)
     return unload_ok
 
 

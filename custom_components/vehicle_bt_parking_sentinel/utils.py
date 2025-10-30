@@ -260,22 +260,53 @@ async def translate(hass, key: str, default: str | None = None, **fmt) -> str:
         return default or key
 
 
-async def async_build_notify_message(hass, lat: float, lon: float) -> tuple[str, str]:
+async def async_build_notify_message(hass, lat: float, lon: float, saved_lat: float = None, saved_lon: float = None) -> tuple[str, str]:
     """Return translated (title, message) for movement notifications.
 
     Falls back to English defaults when translation keys are missing.
+    
+    Args:
+        hass: Home Assistant instance
+        lat: Current latitude
+        lon: Current longitude
+        saved_lat: Saved latitude (optional, for distance calculation)
+        saved_lon: Saved longitude (optional, for distance calculation)
+    
+    Returns:
+        Tuple of (title, message)
     """
     title = await translate(hass, "messages.moved_title", "🚨 Vehicle moved!")
+    
+    # Calculate distance if saved coordinates provided
+    distance = 0
+    if saved_lat is not None and saved_lon is not None:
+        from .coordinator import haversine_distance
+        distance = haversine_distance(saved_lat, saved_lon, lat, lon)
+    
+    # Build URLs
+    current_url = f"https://maps.google.com/?q={lat},{lon}"
+    saved_url = f"https://maps.google.com/?q={saved_lat},{saved_lon}" if saved_lat and saved_lon else current_url
+    
+    # Try new format first (with distance, saved_url, current_url)
     message = await translate(
         hass,
         "messages.moved_message",
-        "The vehicle has moved! Open: https://maps.google.com/?q={lat},{lon}",
-        lat=lat,
-        lon=lon,
+        "⚠️ Detected movement of {distance}m from saved position!\n\n📍 Saved position:\n{saved_url}\n\n📍 Current position:\n{current_url}",
     )
-    # if message template didn't include formatting, ensure url is present
-    if "{lat}" not in message and "{lon}" not in message and "https://maps.google.com" not in message:
-        message = f"{message} Open: https://maps.google.com/?q={lat},{lon}"
+    
+    # Format with new placeholders
+    try:
+        message = message.format(
+            distance=f"{distance:.0f}",
+            saved_url=saved_url,
+            current_url=current_url,
+            lat=lat,  # Keep for backward compatibility
+            lon=lon   # Keep for backward compatibility
+        )
+    except KeyError:
+        # Fallback to old format if new placeholders not found
+        message = message.format(lat=lat, lon=lon)
+    
     return title, message
 
 

@@ -76,6 +76,7 @@ class VehicleCoordinator:
 
         # runtime helpers
         self._unsub_track = None
+        self._unsub_mobile_action = None  # Track mobile_app_notification_action listener
         self._stationary_handle = None
         # flag indicating we enabled alarm but have not yet found a fresh GPS to save
         self._awaiting_activation_save = False
@@ -306,6 +307,13 @@ class VehicleCoordinator:
         if self.debug_mode:
             _LOGGER.debug("Applied new options to coordinator: %s", options)
             self._debug_notify(f"Options updated: {options}")
+        
+        # Notify sensor to update its state and attributes with new options
+        try:
+            from homeassistant.helpers.dispatcher import async_dispatcher_send
+            async_dispatcher_send(self.hass, f"{DOMAIN}_{self.entry_id}_update")
+        except (AttributeError, KeyError, ImportError):
+            pass
 
     async def async_start(self, device_tracker_entity: str):
         # subscribe to device_tracker state changes
@@ -314,9 +322,21 @@ class VehicleCoordinator:
         )
 
     async def async_stop(self):
+        """Stop coordinator and cleanup all listeners."""
+        # Unsubscribe from device_tracker state changes
         if self._unsub_track:
             self._unsub_track()
             self._unsub_track = None
+        
+        # Unsubscribe from mobile_app_notification_action
+        if self._unsub_mobile_action:
+            self._unsub_mobile_action()
+            self._unsub_mobile_action = None
+        
+        # Cancel any pending stationary timer
+        if self._stationary_handle:
+            self._stationary_handle()
+            self._stationary_handle = None
 
     @callback
     def _async_device_tracker_changed(self, event):
@@ -407,16 +427,8 @@ class VehicleCoordinator:
                     if self.has_moved(lat_f, lon_f, self.tolerance_radius):
                         # avoid duplicate notifications
                         if not self.position_notified:
-                            # build message and call notifier
-                            # use translated notify title/message
-                            try:
-                                from .utils import async_build_notify_message
-
-                                title, message = await async_build_notify_message(self.hass, lat_f, lon_f)
-                            except Exception:
-                                title, _ = build_notify_message(lat_f, lon_f)
-                                message = format_map_url(lat_f, lon_f)
-                            await self.hass.services.async_call("notify", self.notifier, {"title": title, "message": message})
+                            # Send movement notification with full details
+                            await self._notify_movement(lat_f, lon_f)
                             self.position_notified = True
                             await self.async_save()
 
@@ -496,7 +508,7 @@ class VehicleCoordinator:
         except Exception:
             pass
 
-    async def set_alarm_active(self, active: bool, activation_time: str | None = None) -> None:
+    async def set_alarm_active(self, active: bool, activation_time: str | None = None, notify_waiting: bool = False) -> None:
         """Set alarm active state.
 
         If enabling the alarm (active=True), attempt to immediately save the current
@@ -506,6 +518,9 @@ class VehicleCoordinator:
         
         The optional `activation_time` (format YYYYMMDDHHMMSS) can be provided for
         testing; otherwise current UTC time is used.
+        
+        If `notify_waiting` is True and we end up waiting for fresh GPS, send a
+        notification to the user informing them we're waiting for position.
         """
         previous = bool(getattr(self, "alarm_active", False))
         self.alarm_active = bool(active)
@@ -570,6 +585,20 @@ class VehicleCoordinator:
                                 async_dispatcher_send(self.hass, f"{DOMAIN}_{self.entry_id}_update")
                             except (AttributeError, KeyError, ImportError):
                                 pass
+                            
+                            # If notify_waiting is True, send user notification
+                            if notify_waiting and self.notifier:
+                                try:
+                                    from .utils import translate
+                                    title = await translate(self.hass, "messages.manual_trigger_awaiting_title", "⏳ Parking sentinel activating...")
+                                    message = await translate(self.hass, "messages.manual_trigger_awaiting_message", "Waiting for fresh GPS position to save parking location.")
+                                    await self.hass.services.async_call(
+                                        "notify",
+                                        self.notifier.replace("notify.", ""),
+                                        {"title": title, "message": message},
+                                    )
+                                except Exception:
+                                    _LOGGER.exception("Failed to send waiting notification")
                     except Exception:
                         # suppress any exceptions from this best-effort save
                         _LOGGER.exception("Error while attempting save-on-activation")
@@ -678,15 +707,28 @@ class VehicleCoordinator:
         # Only send for "save" and "start" - NOT for disconnect/stationary (those are automatic)
         if self.notifier and reason in ("save", "start"):
             try:
-                service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
+                from .utils import translate
                 
-                # Build message based on reason
+                service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
+                map_url = f"https://maps.google.com/?q={lat},{lon}"
+                
+                # Build message based on reason using translations
                 if reason == "start":
-                    title = "🟢 Monitoraggio attivato"
-                    message = f"Allarme attivo. Monitoraggio posizione corrente.\n📍 https://maps.google.com/?q={lat},{lon}"
+                    title = await translate(self.hass, "messages.monitoring_activated_title", "🟢 Monitoring activated")
+                    message_template = await translate(
+                        self.hass, 
+                        "messages.monitoring_activated_message", 
+                        "Alarm active. Monitoring current position.\n📍 {map_url}"
+                    )
+                    message = message_template.format(map_url=map_url)
                 else:  # reason == "save"
-                    title = "📍 Posizione salvata"
-                    message = f"Posizione parcheggio memorizzata.\n📍 https://maps.google.com/?q={lat},{lon}"
+                    title = await translate(self.hass, "messages.position_saved_title", "📍 Position saved")
+                    message_template = await translate(
+                        self.hass,
+                        "messages.position_saved_message",
+                        "Parking position saved.\n📍 {map_url}"
+                    )
+                    message = message_template.format(map_url=map_url)
                 
                 _LOGGER.debug("Sending notification: reason=%s, service=%s", reason, service_name)
                 
@@ -805,15 +847,23 @@ class VehicleCoordinator:
         if self.saved_latitude and self.saved_longitude:
             distance = haversine_distance(self.saved_latitude, self.saved_longitude, lat, lon)
         
+        from .utils import translate
+        
         service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
         
-        title = "🚨 Veicolo in movimento!"
-        message = (
-            f"⚠️ Rilevato spostamento di {distance:.0f}m dalla posizione salvata!\n\n"
-            f"📍 Posizione salvata:\n"
-            f"https://maps.google.com/?q={self.saved_latitude},{self.saved_longitude}\n\n"
-            f"📍 Posizione attuale:\n"
-            f"https://maps.google.com/?q={lat},{lon}"
+        saved_url = f"https://maps.google.com/?q={self.saved_latitude},{self.saved_longitude}"
+        current_url = f"https://maps.google.com/?q={lat},{lon}"
+        
+        title = await translate(self.hass, "messages.moved_title", "🚨 Vehicle moved!")
+        message_template = await translate(
+            self.hass,
+            "messages.moved_message",
+            "⚠️ Detected movement of {distance}m from saved position!\n\n📍 Saved position:\n{saved_url}\n\n📍 Current position:\n{current_url}"
+        )
+        message = message_template.format(
+            distance=f"{distance:.0f}",
+            saved_url=saved_url,
+            current_url=current_url
         )
         
         _LOGGER.info("Sending movement alert: distance=%.0fm", distance)

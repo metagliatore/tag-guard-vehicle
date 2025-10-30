@@ -63,7 +63,7 @@ def test_handle_webhook_actions_start_and_stop():
         def __init__(self):
             self.alarm_active = False
 
-        async def set_alarm_active(self, v: bool):
+        async def set_alarm_active(self, v: bool, activation_time=None, notify_waiting=False):
             self.alarm_active = bool(v)
 
     class FakeHass:
@@ -89,9 +89,9 @@ def test_handle_webhook_actions_start_and_stop():
     assert resp.status == 200
     assert coord.alarm_active is True
 
-    # disarm action
-    req_disarm = FakeRequest(payload={"action": "disarm"})
-    resp2 = asyncio.run(handle_webhook_impl(hass, coord, "device_tracker.foo", req_disarm))
+    # stop action
+    req_stop = FakeRequest(payload={"action": "stop"})
+    resp2 = asyncio.run(handle_webhook_impl(hass, coord, "device_tracker.foo", req_stop))
     assert isinstance(resp2, web.Response)
     assert resp2.status == 200
     assert coord.alarm_active is False
@@ -196,7 +196,7 @@ def test_handle_webhook_impl_start_stop_actions():
         def __init__(self):
             self.alarm_active = None
 
-        async def set_alarm_active(self, active: bool):
+        async def set_alarm_active(self, active: bool, activation_time=None, notify_waiting=False):
             self.alarm_active = bool(active)
 
     class FakeRequest:
@@ -217,9 +217,9 @@ def test_handle_webhook_impl_start_stop_actions():
     assert resp.status == 200
     assert coord.alarm_active is True
 
-    # disarm
-    req_disarm = FakeRequest(payload={"action": "disarm"})
-    resp2 = asyncio.run(services.handle_webhook_impl(hass, coord, "device_tracker.foo", req_disarm))
+    # stop
+    req_stop = FakeRequest(payload={"action": "stop"})
+    resp2 = asyncio.run(services.handle_webhook_impl(hass, coord, "device_tracker.foo", req_stop))
     assert resp2.status == 200
     assert coord.alarm_active is False
 
