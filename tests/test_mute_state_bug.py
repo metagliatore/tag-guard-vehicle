@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_mute_from_awaiting_position_keeps_state():
     """Test that calling mute while in awaiting_position state doesn't change to alarm_triggered."""
-    from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+    from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
     
     class FakeHass:
         data = {}
@@ -31,9 +31,9 @@ async def test_mute_from_awaiting_position_keeps_state():
     hass = FakeHass()
     entry = FakeEntry("test_entry")
     coord = FakeCoordinator()
-    hass.data["vehicle_bt_parking_sentinel"] = {entry.entry_id + "_coordinator": coord}
+    hass.data["tag_guard_vehicle"] = {entry.entry_id + "_coordinator": coord}
     
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
     
     # Setup: alarm active, no position, awaiting GPS (awaiting_position state)
     coord.alarm_active = True
@@ -56,7 +56,7 @@ async def test_mute_from_awaiting_position_keeps_state():
 @pytest.mark.asyncio
 async def test_mute_from_awaiting_position_with_old_position():
     """Test mute doesn't trigger alarm_triggered when awaiting fresh GPS but have old position."""
-    from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+    from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
     
     class FakeHass:
         data = {}
@@ -82,9 +82,9 @@ async def test_mute_from_awaiting_position_with_old_position():
     hass = FakeHass()
     entry = FakeEntry("test_entry")
     coord = FakeCoordinator()
-    hass.data["vehicle_bt_parking_sentinel"] = {entry.entry_id + "_coordinator": coord}
+    hass.data["tag_guard_vehicle"] = {entry.entry_id + "_coordinator": coord}
     
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
     
     # Setup: alarm active, HAS old position, but awaiting fresh GPS
     coord.alarm_active = True
@@ -120,7 +120,7 @@ async def test_mute_from_awaiting_position_with_old_position():
 @pytest.mark.asyncio
 async def test_parked_then_start_again_stays_awaiting():
     """Test that calling start again while parked goes to awaiting_position and stays there."""
-    from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+    from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
     
     class FakeHass:
         data = {}
@@ -146,9 +146,9 @@ async def test_parked_then_start_again_stays_awaiting():
     hass = FakeHass()
     entry = FakeEntry("test_entry")
     coord = FakeCoordinator()
-    hass.data["vehicle_bt_parking_sentinel"] = {entry.entry_id + "_coordinator": coord}
+    hass.data["tag_guard_vehicle"] = {entry.entry_id + "_coordinator": coord}
     
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
     
     # Setup: parked state (alarm active, position saved)
     coord.alarm_active = True

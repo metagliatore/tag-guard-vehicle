@@ -1,4 +1,4 @@
-# Vehicle BT Parking Sentinel — Lovelace Card
+# Tag Guard Vehicle — Lovelace Card
 
 This file explains how to enable and use the minimal custom Lovelace card included with the integration.
 
@@ -10,11 +10,11 @@ Simply add the card to your dashboard:
 
 1. Go to your dashboard
 2. Click "Add Card"
-3. Search for "Vehicle BT Parking Sentinel" in the card picker
+3. Search for "Tag Guard Vehicle" in the card picker
 4. Or add a Manual card with this YAML:
 
 ```yaml
-type: custom:vehicle-bt-parking-sentinel-card
+type: custom:tag-guard-vehicle-card
 entity: sensor.<your_entry_id>_vehicle_status
 title: Vehicle Parking
 ```
@@ -26,19 +26,19 @@ If the card doesn't appear or you see "Custom element doesn't exist", manually r
 1. Go to **Settings** → **Dashboards** → **Resources** (top-right menu)
 2. Click **Add Resource**
 3. Set:
-   - **URL**: `/vehicle_bt_parking_sentinel/vehicle-bt-parking-sentinel-card-v2.js`
+   - **URL**: `/tag_guard_vehicle/tag-guard-vehicle-card.js`
    - **Type**: `JavaScript Module`
 4. Click **Create**
 
 **Alternative paths** (try these if the above doesn't work):
-- `/hacsfiles/vehicle_bt_parking_sentinel/vehicle-bt-parking-sentinel-card-v2.js`
-- `/local/community/vehicle_bt_parking_sentinel/vehicle-bt-parking-sentinel-card-v2.js`
+- `/hacsfiles/tag_guard_vehicle/tag-guard-vehicle-card.js`
+- `/local/community/tag_guard_vehicle/tag-guard-vehicle-card.js`
 
 ## Card File Location
 
 The card JavaScript file is located at:
 ```
-custom_components/vehicle_bt_parking_sentinel/www/vehicle-bt-parking-sentinel-card-v2.js
+custom_components/tag_guard_vehicle/www/tag-guard-vehicle-card.js
 ```
 
 Home Assistant automatically serves files from `custom_components/<domain>/www/` at the URL path `/<domain>/`.
@@ -47,7 +47,7 @@ Home Assistant automatically serves files from `custom_components/<domain>/www/`
 - Add a Manual card and paste this YAML, replacing `sensor.<your_entry_id>_vehicle_status` with your sensor entity id (Developer Tools → States):
 
 ```yaml
-type: custom:vehicle-bt-parking-sentinel-card
+type: custom:tag-guard-vehicle-card
 entity: sensor.<your_entry_id>_vehicle_status
 title: Vehicle Parking
 ```
@@ -55,7 +55,7 @@ title: Vehicle Parking
 Example with explicit entity attributes (useful in YAML views):
 
 ```yaml
-- type: custom:vehicle-bt-parking-sentinel-card
+- type: custom:tag-guard-vehicle-card
   entity: sensor.12345678_vehicle_status
   title: Vehicle Parking
 ```
@@ -66,13 +66,13 @@ Customization
 
 ## Troubleshooting
 
-### "Custom element doesn't exist: vehicle-bt-parking-sentinel-card"
+### "Custom element doesn't exist: tag-guard-vehicle-card"
 
 1. **Check if resource is registered**: Go to Settings → Dashboards → Resources and verify the entry exists
-2. **Try manual registration**: Use the URL `/vehicle_bt_parking_sentinel/vehicle-bt-parking-sentinel-card-v2.js` (see Manual Registration section above)
+2. **Try manual registration**: Use the URL `/tag_guard_vehicle/tag-guard-vehicle-card.js` (see Manual Registration section above)
 3. **Clear browser cache**: Hard-reload the dashboard (Ctrl+Shift+R or Cmd+Shift+R)
-4. **Check browser console**: Press F12, go to Console tab, look for errors or the message "vehicle-bt-parking-sentinel-card loaded"
-5. **Verify file exists**: Check that `custom_components/vehicle_bt_parking_sentinel/www/vehicle-bt-parking-sentinel-card-v2.js` exists in your HA config directory
+4. **Check browser console**: Press F12, go to Console tab, look for errors or the message "tag-guard-vehicle-card loaded"
+5. **Verify file exists**: Check that `custom_components/tag_guard_vehicle/www/tag-guard-vehicle-card.js` exists in your HA config directory
 
 ### Card shows "Entity not found"
 
@@ -88,7 +88,7 @@ Customization
 
 Open your browser console (F12) and run:
 ```javascript
-customElements.get('vehicle-bt-parking-sentinel-card')
+customElements.get('tag-guard-vehicle-card')
 ```
 
 If it returns a class definition, the card is loaded. If it returns `undefined`, the resource isn't loaded properly.
@@ -101,7 +101,7 @@ Developer notes
 
 Webhook control page and examples
 
-The integration exposes a webhook URL that can be used to trigger saves or control the sentinel. Visiting the webhook URL in a browser (GET) shows a small HTML control page with three buttons: Start, Stop, and Trigger Save.
+The integration exposes a webhook URL that can be used to trigger saves or control the guard. Visiting the webhook URL in a browser (GET) shows a small HTML control page with three buttons: Start, Stop, and Trigger Save.
 
 - Webhook URL format:
 
@@ -110,8 +110,8 @@ The integration exposes a webhook URL that can be used to trigger saves or contr
 - Browser (GET): opens the control page. The control page posts actions back to the same webhook URL.
 
 - Actions supported (via POST JSON body or query parameter `action`):
-  - `start` / `enable` / `arm` — enable the sentinel/alarm.
-  - `stop` / `disable` / `disarm` — disable the sentinel/alarm.
+  - `start` / `enable` / `arm` — enable the guard/alarm.
+  - `stop` / `disable` / `disarm` — disable the guard/alarm.
   - `save` / `trigger` / `save_now` — trigger an immediate save using the configured `device_tracker` as the coordinate source.
 
 Security: token usage
@@ -139,7 +139,7 @@ curl -X POST "https://<your-ha>/api/webhook/<token>" \
   -d '{}'   # handler will use the configured device_tracker to get coordinates
 ```
 
-- Start/stop the sentinel via POST action:
+- Start/stop the guard via POST action:
 
 ```bash
 curl -X POST "https://<your-ha>/api/webhook/<token>" \

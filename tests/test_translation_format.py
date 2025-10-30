@@ -4,7 +4,7 @@
 import json
 import os
 
-TRANS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "custom_components", "vehicle_bt_parking_sentinel", "translations")
+TRANS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "custom_components", "tag_guard_vehicle", "translations")
 
 
 def _load_component_messages(path):

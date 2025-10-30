@@ -18,7 +18,7 @@
       "activation_mode_help": "激活模式：connection、position、combined 或 manual。",
       "tag_model_help": "蓝牙标签型号 — 某些型号报告坐标的方式不同。",
       "webhook_help": "可选：输入自定义 webhook 令牌，或留空以由集成生成。",
-  "control_title": "Vehicle BT Parking Sentinel — 控制",
+  "control_title": "Tag Guard Vehicle — 控制",
   "control_description": "使用按钮启动/停止哨兵或触发保存。",
   "start_button": "启动（启用）",
   "stop_button": "停止（禁用）",

@@ -18,7 +18,7 @@
       "activation_mode_help": "Режим активації: connection, position, combined або manual.",
       "tag_model_help": "Модель Bluetooth-мітки – деякі моделі повідомляють координати по-різному.",
       "webhook_help": "Необов'язково: введіть власний webhook token або залиште порожнім для автоматичної генерації.",
-      "control_title": "Vehicle BT Parking Sentinel — Керування",
+      "control_title": "Tag Guard Vehicle — Керування",
       "control_description": "Використовуйте кнопки для запуску/зупинки або збереження позиції.",
       "start_button": "Запустити (увімкнути)",
       "stop_button": "Зупинити (вимкнути)",

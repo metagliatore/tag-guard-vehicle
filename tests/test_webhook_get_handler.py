@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, AsyncMock
 @pytest.mark.asyncio
 async def test_webhook_get_returns_html_control_page():
     """Test that GET request to webhook returns HTML control page."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -56,7 +56,7 @@ async def test_webhook_get_returns_html_control_page():
 
     # Verify HTML contains control buttons
     html_body = response.body.decode("utf-8")
-    assert "Vehicle BT Parking Sentinel" in html_body
+    assert "Tag Guard Vehicle" in html_body
     assert "Start" in html_body or "start" in html_body.lower()
     assert "Stop" in html_body or "stop" in html_body.lower()
     assert "button" in html_body.lower() or "form" in html_body.lower()
@@ -65,7 +65,7 @@ async def test_webhook_get_returns_html_control_page():
 @pytest.mark.asyncio
 async def test_webhook_get_with_action_query_param_start():
     """Test POST request with action=start in JSON body."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -115,7 +115,7 @@ async def test_webhook_get_with_action_query_param_start():
 @pytest.mark.asyncio
 async def test_webhook_get_with_action_query_param_stop():
     """Test POST request with action=stop in JSON body."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -165,7 +165,7 @@ async def test_webhook_get_with_action_query_param_stop():
 @pytest.mark.asyncio
 async def test_webhook_post_json_with_action_start():
     """Test POST with JSON body containing action=enable."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -219,7 +219,7 @@ async def test_webhook_post_json_with_action_start():
 @pytest.mark.asyncio
 async def test_webhook_post_json_with_action_stop():
     """Test POST with JSON body containing action=stop."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -273,7 +273,7 @@ async def test_webhook_post_json_with_action_stop():
 @pytest.mark.asyncio
 async def test_webhook_post_with_coordinates():
     """Test POST with action=save uses device_tracker coordinates (not payload)."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeState:
         def __init__(self):
@@ -339,7 +339,7 @@ async def test_webhook_post_with_coordinates():
 @pytest.mark.asyncio
 async def test_webhook_post_without_coordinates_uses_device_tracker():
     """Test POST with action=save uses device_tracker coordinates."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeState:
         def __init__(self):
@@ -406,7 +406,7 @@ async def test_webhook_post_without_coordinates_uses_device_tracker():
 @pytest.mark.asyncio
 async def test_webhook_html_page_structure():
     """Test that HTML page contains expected elements."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -456,7 +456,7 @@ async def test_webhook_html_page_structure():
     assert "<body" in html_body.lower()
 
     # Check for title or heading
-    assert "vehicle" in html_body.lower() or "parking" in html_body.lower() or "sentinel" in html_body.lower()
+    assert "vehicle" in html_body.lower() or "parking" in html_body.lower() or "guard" in html_body.lower()
 
     # Check for some form of control elements (buttons or links)
     # The implementation might use different approaches

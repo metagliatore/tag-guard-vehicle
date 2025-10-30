@@ -1,4 +1,4 @@
-"""Config flow for Vehicle BT Parking Sentinel."""
+"""Config flow for Tag Guard Vehicle."""
 import voluptuous as vol
 import logging
 
@@ -29,14 +29,43 @@ from .const import (
     CONF_STATIONARY_MINUTES,
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
+    CONF_WEBHOOK_TOKEN,
     TAG_MODELS,
 )
 from .utils import needs_stationary_step, build_create_payload, translate
 
 _LOGGER = logging.getLogger(__name__)
 
-class VehicleBtParkingSentinelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Vehicle BT Parking Sentinel."""
+
+def is_webhook_token_in_use(hass, token: str, exclude_entry_id: str = None) -> bool:
+    """Check if a webhook token is already in use by another config entry.
+    
+    Args:
+        hass: Home Assistant instance
+        token: The webhook token to check
+        exclude_entry_id: Optional entry_id to exclude (for options flow)
+    
+    Returns:
+        True if token is in use, False otherwise
+    """
+    if not token:
+        return False
+    
+    # Check all existing config entries for this domain
+    entries = hass.config_entries.async_entries(DOMAIN)
+    for entry in entries:
+        if exclude_entry_id and entry.entry_id == exclude_entry_id:
+            continue
+        
+        # Check both data and options for webhook_token
+        existing_token = entry.options.get(CONF_WEBHOOK_TOKEN) or entry.data.get(CONF_WEBHOOK_TOKEN)
+        if existing_token == token:
+            return True
+    
+    return False
+
+class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Tag Guard Vehicle."""
 
     VERSION = 1
 
@@ -50,22 +79,29 @@ class VehicleBtParkingSentinelConfigFlow(config_entries.ConfigFlow, domain=DOMAI
         """
         errors = {}
         if user_input is not None:
-            # store the partial results and branch depending on activation mode
-            self._user_data = user_input
-            activation = user_input.get(CONF_ACTIVATION_MODE)
-            if needs_stationary_step(activation):
-                return await self.async_step_stationary()
+            # Check if custom webhook_token is provided and if it's already in use
+            custom_token = user_input.get("webhook_token", "").strip()
+            if custom_token and is_webhook_token_in_use(self.hass, custom_token):
+                errors["webhook_token"] = "webhook_token_in_use"
+                _LOGGER.warning("Webhook token already in use: %s", custom_token)
+            
+            if not errors:
+                # store the partial results and branch depending on activation mode
+                self._user_data = user_input
+                activation = user_input.get(CONF_ACTIVATION_MODE)
+                if needs_stationary_step(activation):
+                    return await self.async_step_stationary()
 
-            # activation doesn't require stationary params: build payload via helper
-            data, options = build_create_payload(user_input)
-            # if webhook token was auto-generated, log to make flow clearer in logs
-            if not user_input.get("webhook_token") and options.get("webhook_token"):
-                import logging
+                # activation doesn't require stationary params: build payload via helper
+                data, options = build_create_payload(user_input)
+                # if webhook token was auto-generated, log to make flow clearer in logs
+                if not user_input.get("webhook_token") and options.get("webhook_token"):
+                    import logging
 
-                logging.getLogger(__name__).info("Generated webhook token for new config entry (shown to user in next step)")
-            # stash the built payload and show token page
-            self._create_payload = (data, options)
-            return await self.async_step_show_token()
+                    logging.getLogger(__name__).info("Generated webhook token for new config entry (shown to user in next step)")
+                # stash the built payload and show token page
+                self._create_payload = (data, options)
+                return await self.async_step_show_token()
 
         # present initial form
         if user_input is None:
@@ -78,7 +114,6 @@ class VehicleBtParkingSentinelConfigFlow(config_entries.ConfigFlow, domain=DOMAI
                 pass
             
             notify_services_text = ", ".join(notify_services) if notify_services else "No notify services found"
-            
             # build translated placeholders (awaited)
             activation_help = await translate(
                 self.hass,
@@ -212,22 +247,28 @@ class VehicleBtParkingSentinelConfigFlow(config_entries.ConfigFlow, domain=DOMAI
                 description_placeholders=placeholders,
             )
 
-        # If we reach here user_input was provided and handled above.
-
     async def async_step_stationary(self, user_input=None):
         """Collect stationary-related parameters (only for position/combined).
 
         We ask for both a time threshold (minutes) and a number of repeated
         reports (count) that must be observed in the same area before
-        activating the sentinel mode.
+        activating the guard mode.
         """
+        errors = {}
         if user_input is not None:
-            # merge with stored user_data and generate webhook token if missing
-            base = getattr(self, "_user_data", {})
-            data, options = build_create_payload(user_input, base=base)
-            # stash and show token before finalizing
-            self._create_payload = (data, options)
-            return await self.async_step_show_token()
+            # Check if custom webhook_token is provided and if it's already in use
+            custom_token = user_input.get("webhook_token", "").strip()
+            if custom_token and is_webhook_token_in_use(self.hass, custom_token):
+                errors["webhook_token"] = "webhook_token_in_use"
+                _LOGGER.warning("Webhook token already in use: %s", custom_token)
+            
+            if not errors:
+                # merge with stored user_data and generate webhook token if missing
+                base = getattr(self, "_user_data", {})
+                data, options = build_create_payload(user_input, base=base)
+                # stash and show token before finalizing
+                self._create_payload = (data, options)
+                return await self.async_step_show_token()
 
         # show stationary form
         if user_input is None:
@@ -288,7 +329,7 @@ class VehicleBtParkingSentinelConfigFlow(config_entries.ConfigFlow, domain=DOMAI
             webhook_url = token
         if user_input is not None:
             # user confirmed; create the entry
-            return self.async_create_entry(title="Vehicle BT Parking Sentinel", data=data, options=options)
+            return self.async_create_entry(title="Tag Guard Vehicle", data=data, options=options)
 
         # present a simple form with the token filled so user can copy it
         return self.async_show_form(

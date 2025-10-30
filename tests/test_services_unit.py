@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from custom_components.vehicle_bt_parking_sentinel import services
+from custom_components.tag_guard_vehicle import services
 
 
 class FakeState:

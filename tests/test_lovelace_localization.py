@@ -1,7 +1,7 @@
 """Test that the Lovelace card properly uses localization helpers.
 
 Checks that:
-`custom_components/vehicle_bt_parking_sentinel/www/vehicle-bt-parking-sentinel-card-v2.js`
+`custom_components/tag_guard_vehicle/www/tag-guard-vehicle-card.js`
 includes code to localize labels via `hass.localize()` and falls back
 to English if localization keys are missing.
 """
@@ -9,7 +9,7 @@ to English if localization keys are missing.
 from pathlib import Path
 
 
-JS_PATH = Path(__file__).parent.parent / "custom_components" / "vehicle_bt_parking_sentinel" / "www" / "vehicle-bt-parking-sentinel-card-v2.js"
+JS_PATH = Path(__file__).parent.parent / "custom_components" / "tag_guard_vehicle" / "www" / "tag-guard-vehicle-card.js"
 
 
 def test_card_js_has_localize_keys():
@@ -17,13 +17,13 @@ def test_card_js_has_localize_keys():
     text = JS_PATH.read_text(encoding="utf-8")
 
     keys = [
-        'component.vehicle_bt_parking_sentinel.messages.saved_coords_label',
-        'component.vehicle_bt_parking_sentinel.messages.gps_utc_label',
-        'component.vehicle_bt_parking_sentinel.messages.location_type_label',
-        'component.vehicle_bt_parking_sentinel.messages.last_seen_label',
-        'component.vehicle_bt_parking_sentinel.messages.stationary_counter_label',
-        'component.vehicle_bt_parking_sentinel.messages.alarm_label',
-        'component.vehicle_bt_parking_sentinel.messages.device_tracker_help',
+        'component.tag_guard_vehicle.messages.saved_coords_label',
+        'component.tag_guard_vehicle.messages.gps_utc_label',
+        'component.tag_guard_vehicle.messages.location_type_label',
+        'component.tag_guard_vehicle.messages.last_seen_label',
+        'component.tag_guard_vehicle.messages.stationary_counter_label',
+        'component.tag_guard_vehicle.messages.alarm_label',
+        'component.tag_guard_vehicle.messages.device_tracker_help',
     ]
 
     for key in keys:

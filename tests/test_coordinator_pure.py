@@ -5,8 +5,8 @@ These tests run coordinator algorithms as pure functions where possible.
 
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
-from custom_components.vehicle_bt_parking_sentinel.utils import haversine_distance
+from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
+from custom_components.tag_guard_vehicle.utils import haversine_distance
 
 
 class DummyHass:

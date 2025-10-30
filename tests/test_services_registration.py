@@ -5,7 +5,7 @@ import asyncio
 import logging
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel import services
+from custom_components.tag_guard_vehicle import services
 
 
 class FakeServices:
@@ -68,11 +68,11 @@ async def test_async_register_services_registers():
     coord = DummyCoordinator()
     await services.async_register_services(hass, coord, "device.tracker_1", "notify.test")
     # check that services are registered (manual_trigger was removed - use start with notify_waiting instead)
-    assert ("vehicle_bt_parking_sentinel", "save_position") in hass.services._registry
-    assert ("vehicle_bt_parking_sentinel", "reset_flags") in hass.services._registry
-    assert ("vehicle_bt_parking_sentinel", "clear_persisted") in hass.services._registry
-    assert ("vehicle_bt_parking_sentinel", "mute_notifications") in hass.services._registry
-    assert ("vehicle_bt_parking_sentinel", "unmute_notifications") in hass.services._registry
+    assert ("tag_guard_vehicle", "save_position") in hass.services._registry
+    assert ("tag_guard_vehicle", "reset_flags") in hass.services._registry
+    assert ("tag_guard_vehicle", "clear_persisted") in hass.services._registry
+    assert ("tag_guard_vehicle", "mute_notifications") in hass.services._registry
+    assert ("tag_guard_vehicle", "unmute_notifications") in hass.services._registry
 
 
 @pytest.mark.asyncio
@@ -83,7 +83,7 @@ async def test_get_webhook_info_logs(monkeypatch, caplog):
     # register helper services
     await services.async_register_helper_services(hass, coord, "entry1", "secret-token")
     # call get_webhook_info service function
-    func = hass.services._registry[("vehicle_bt_parking_sentinel", "get_webhook_info")]
+    func = hass.services._registry[("tag_guard_vehicle", "get_webhook_info")]
     caplog.set_level(logging.INFO)
     info = await func()
     assert info["token"] == "secret-token"

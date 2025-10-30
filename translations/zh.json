@@ -1,9 +1,9 @@
 {
   "component": {
-    "title": "Vehicle BT Parking Sentinel",
+    "title": "Tag Guard Vehicle",
     "config": {
-      "activation_help": "'manual' 模式允许手动激活 sentinel；它始终可用且不需要 'stationary' 参数。",
-      "user_title": "Vehicle BT Parking Sentinel 配置",
+      "activation_help": "'manual' 模式允许手动激活 guard；它始终可用且不需要 'stationary' 参数。",
+      "user_title": "Tag Guard Vehicle 配置",
       "user_description": "选择 device_tracker、person 实体和激活模式。\n'manual' 模式需要手动激活。",
       "stationary_title": "Stationary 参数",
       "stationary_description": "定义在确认位置之前所需的分钟数和重复报告次数。",

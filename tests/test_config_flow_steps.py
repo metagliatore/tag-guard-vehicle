@@ -6,8 +6,8 @@ during integration setup.
 
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel.config_flow import VehicleBtParkingSentinelConfigFlow
-from custom_components.vehicle_bt_parking_sentinel.const import (
+from custom_components.tag_guard_vehicle.config_flow import TagGuardVehicleConfigFlow
+from custom_components.tag_guard_vehicle.const import (
     CONF_DEVICE_TRACKER,
     CONF_PERSON_ENTITY,
     CONF_NOTIFIER,
@@ -21,7 +21,7 @@ from custom_components.vehicle_bt_parking_sentinel.const import (
 @pytest.mark.asyncio
 # Test: initial user step presents the user form
 async def test_flow_user_shows_form():
-    flow = VehicleBtParkingSentinelConfigFlow()
+    flow = TagGuardVehicleConfigFlow()
     res = await flow.async_step_user()
     assert res["type"] == "form" and res["step_id"] == "user"
 
@@ -29,7 +29,7 @@ async def test_flow_user_shows_form():
 @pytest.mark.asyncio
 # Test: choosing position activation mode branches flow to stationary step
 async def test_flow_user_branches_to_stationary(monkeypatch):
-    flow = VehicleBtParkingSentinelConfigFlow()
+    flow = TagGuardVehicleConfigFlow()
     user_input = {
         CONF_DEVICE_TRACKER: "device.tracker_1",
         CONF_PERSON_ENTITY: "person.someone",
@@ -48,7 +48,7 @@ async def test_flow_user_branches_to_stationary(monkeypatch):
 async def test_flow_complete_shows_token_and_creates_entry(monkeypatch):
     # make token deterministic
     monkeypatch.setattr("secrets.token_urlsafe", lambda n: "fixed-token")
-    flow = VehicleBtParkingSentinelConfigFlow()
+    flow = TagGuardVehicleConfigFlow()
     user_input = {
         CONF_DEVICE_TRACKER: "device.tracker_1",
         CONF_PERSON_ENTITY: "person.someone",

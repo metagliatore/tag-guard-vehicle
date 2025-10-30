@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from custom_components.vehicle_bt_parking_sentinel import utils
+from custom_components.tag_guard_vehicle import utils
 
 
 # Test: when saved position is None, has_moved should return False (cannot determine movement)

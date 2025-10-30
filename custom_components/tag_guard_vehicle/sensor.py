@@ -1,4 +1,4 @@
-"""Sensor platform for Vehicle BT Parking Sentinel."""
+"""Sensor platform for Tag Guard Vehicle."""
 import logging
 
 from homeassistant.components.sensor import SensorEntity
@@ -18,12 +18,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    _LOGGER.info("Setting up Vehicle BT Parking Sentinel sensor platform")
-    async_add_entities([VehicleBtParkingSentinelSensor(hass, entry)])
+    _LOGGER.info("Setting up Tag Guard Vehicle sensor platform")
+    async_add_entities([TagGuardVehicleSensor(hass, entry)])
 
 
-class VehicleBtParkingSentinelSensor(SensorEntity):
-    """Representation of a Vehicle BT Parking Sentinel sensor."""
+class TagGuardVehicleSensor(SensorEntity):
+    """Representation of a Tag Guard Vehicle sensor."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         """Initialize the sensor."""
@@ -43,12 +43,12 @@ class VehicleBtParkingSentinelSensor(SensorEntity):
             dt = None
         if dt:
             # human-friendly name includes the tracker entity id
-            self._attr_name = f"Vehicle BT Parking Sentinel ({dt})"
+            self._attr_name = f"Tag Guard Vehicle ({dt})"
             # include tracker in unique id for stronger uniqueness across entries
             safe_dt = dt.replace(".", "_")
             self._attr_unique_id = f"{entry.entry_id}_{safe_dt}_vehicle_status"
         else:
-            self._attr_name = "Vehicle BT Parking Sentinel"
+            self._attr_name = "Tag Guard Vehicle"
             self._attr_unique_id = f"{entry.entry_id}_vehicle_status"
 
         # register an update listener so that if the config entry's options
@@ -100,9 +100,9 @@ class VehicleBtParkingSentinelSensor(SensorEntity):
         except Exception:
             dt = None
         if dt:
-            self._attr_name = f"Vehicle BT Parking Sentinel ({dt})"
+            self._attr_name = f"Tag Guard Vehicle ({dt})"
         else:
-            self._attr_name = "Vehicle BT Parking Sentinel"
+            self._attr_name = "Tag Guard Vehicle"
         try:
             # request HA to persist the new name in the state machine
             self.async_write_ha_state()
@@ -134,7 +134,18 @@ class VehicleBtParkingSentinelSensor(SensorEntity):
         """Fetch new state data for the sensor."""
         coordinator = self._hass.data.get(DOMAIN, {}).get(self._entry.entry_id + "_coordinator")
         if not coordinator:
+            _LOGGER.warning("Coordinator not found for entry_id: %s", self._entry.entry_id)
             return
+        
+        # Log update with safe attribute access (for tests with FakeCoordinator)
+        device_tracker = None
+        if hasattr(coordinator, "config") and hasattr(coordinator.config, "get"):
+            device_tracker = coordinator.config.get("device_tracker")
+        _LOGGER.info("Updating sensor for entry_id=%s, device_tracker=%s, alarm_active=%s, coordinator_id=%s", 
+                     self._entry.entry_id, 
+                     device_tracker,
+                     getattr(coordinator, "alarm_active", None),
+                     id(coordinator))
 
         # build attributes
         # expose core persisted state + runtime hints so a Lovelace card can

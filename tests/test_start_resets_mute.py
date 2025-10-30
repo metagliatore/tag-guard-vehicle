@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_start_resets_mute():
     """Test that calling start (set_alarm_active) resets position_notified to False."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         data = {}
@@ -56,7 +56,7 @@ async def test_start_resets_mute():
 @pytest.mark.asyncio
 async def test_start_from_disabled_also_unmutes():
     """Test that starting from disabled state also ensures position_notified is False."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         data = {}
@@ -104,7 +104,7 @@ async def test_start_from_disabled_also_unmutes():
 @pytest.mark.asyncio
 async def test_disable_alarm_does_not_change_mute():
     """Test that disabling alarm doesn't change position_notified flag."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         data = {}

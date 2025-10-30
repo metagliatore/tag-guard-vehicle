@@ -1,7 +1,7 @@
 """Test clear_persisted service resets coordinator persisted fields and calls async_save."""
 import asyncio
 
-from custom_components.vehicle_bt_parking_sentinel.services import async_register_services
+from custom_components.tag_guard_vehicle.services import async_register_services
 
 
 class FakeHass:
@@ -66,7 +66,7 @@ def test_clear_persisted_service():
     asyncio.run(async_register_services(hass, coord, "device_tracker.x", None))
 
     # call the specific 'clear_persisted' service
-    func = hass._registry.get(("vehicle_bt_parking_sentinel", "clear_persisted"))
+    func = hass._registry.get(("tag_guard_vehicle", "clear_persisted"))
 
     class Call:
         def __init__(self):

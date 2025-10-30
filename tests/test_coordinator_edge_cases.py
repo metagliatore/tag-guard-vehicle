@@ -7,7 +7,7 @@ from datetime import datetime
 @pytest.mark.asyncio
 async def test_handle_device_event_with_none_new_state():
     """Test that _handle_device_event returns early when new_state is None."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -51,7 +51,7 @@ async def test_handle_device_event_with_none_new_state():
 @pytest.mark.asyncio
 async def test_handle_device_event_connection_state_change():
     """Test tag state change from connected to disconnected."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def __init__(self):
@@ -126,7 +126,7 @@ async def test_handle_device_event_connection_state_change():
 @pytest.mark.asyncio
 async def test_handle_device_event_movement_detection():
     """Test movement detection when alarm is active."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def __init__(self):
@@ -197,7 +197,7 @@ async def test_handle_device_event_movement_detection():
 @pytest.mark.asyncio
 async def test_stationary_counter_reset_when_moved():
     """Test that stationary counter resets when vehicle moves."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def __init__(self):
@@ -273,7 +273,7 @@ async def test_stationary_counter_reset_when_moved():
 @pytest.mark.asyncio
 async def test_awaiting_activation_save_with_fresh_gps():
     """Test that awaiting_activation_save completes when fresh GPS arrives."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -343,7 +343,7 @@ async def test_awaiting_activation_save_with_fresh_gps():
 @pytest.mark.asyncio
 async def test_awaiting_activation_save_with_stale_gps():
     """Test that awaiting_activation_save stays active when GPS is stale."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -410,7 +410,7 @@ async def test_awaiting_activation_save_with_stale_gps():
 @pytest.mark.asyncio
 async def test_set_alarm_active_enables_and_disables():
     """Test set_alarm_active with enable and disable."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -463,7 +463,7 @@ async def test_set_alarm_active_enables_and_disables():
 @pytest.mark.asyncio
 async def test_has_moved_without_saved_position():
     """Test has_moved returns False when no saved position."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -489,7 +489,7 @@ async def test_has_moved_without_saved_position():
 @pytest.mark.asyncio
 async def test_has_moved_with_saved_position_within_tolerance():
     """Test has_moved returns False when within tolerance."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -517,7 +517,7 @@ async def test_has_moved_with_saved_position_within_tolerance():
 @pytest.mark.asyncio
 async def test_has_moved_with_saved_position_outside_tolerance():
     """Test has_moved returns True when outside tolerance."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):

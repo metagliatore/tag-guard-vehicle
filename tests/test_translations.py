@@ -10,10 +10,10 @@ import asyncio
 
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel import utils
+from custom_components.tag_guard_vehicle import utils
 
 HERE = os.path.dirname(__file__)
-TRANS_DIR = os.path.join(os.path.dirname(HERE), "custom_components", "vehicle_bt_parking_sentinel", "translations")
+TRANS_DIR = os.path.join(os.path.dirname(HERE), "custom_components", "tag_guard_vehicle", "translations")
 
 
 def test_translate_fallback_without_hass():

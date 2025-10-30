@@ -6,8 +6,8 @@ These validate coordinator logic in a controlled, fake environment.
 import asyncio
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
-from custom_components.vehicle_bt_parking_sentinel.utils import haversine_distance
+from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
+from custom_components.tag_guard_vehicle.utils import haversine_distance
 
 
 class DummyStore:
@@ -78,7 +78,7 @@ async def test_disconnect_saves_position(monkeypatch):
     coord.store = DummyStore()
     coord.notifier = None
     # patch async_call_later to a no-op to avoid scheduling
-    monkeypatch.setattr("custom_components.vehicle_bt_parking_sentinel.coordinator.async_call_later", lambda *a, **k: (lambda: None))
+    monkeypatch.setattr("custom_components.tag_guard_vehicle.coordinator.async_call_later", lambda *a, **k: (lambda: None))
 
     # simulate a disconnect event with coords (op that yields disconnected)
     new_state = FakeState({"ops": [{"oprnType": "OTHER", "oprnResultCode": "0000", "oprnStsCd": "0000", "extra": {"latitude": 45.0, "longitude": 9.0}}]})
@@ -113,7 +113,7 @@ async def test_movement_triggers_notify(monkeypatch):
     monkeypatch.setattr(coord, "_notify_movement", fake_notify)
 
     # patch async_call_later to avoid scheduling
-    monkeypatch.setattr("custom_components.vehicle_bt_parking_sentinel.coordinator.async_call_later", lambda *a, **k: (lambda: None))
+    monkeypatch.setattr("custom_components.tag_guard_vehicle.coordinator.async_call_later", lambda *a, **k: (lambda: None))
 
     new_state = FakeState({"latitude": 45.01, "longitude": 9.0})
     ev = DummyEvent("device.tracker_1", new_state)
@@ -141,7 +141,7 @@ async def test_combined_requires_stationary_then_disconnect(monkeypatch):
         callback(None)
         return lambda: None
 
-    monkeypatch.setattr("custom_components.vehicle_bt_parking_sentinel.coordinator.async_call_later", fake_call_later)
+    monkeypatch.setattr("custom_components.tag_guard_vehicle.coordinator.async_call_later", fake_call_later)
 
     # ensure device tracker configured so stationary_check can read current state
     coord.config["device_tracker"] = "device.tracker_1"

@@ -5,7 +5,7 @@ import pytest
 
 def test_validation_fixes_manual_mode_alarm_active_without_position():
     """Test that alarm_active is reset to False in manual mode when no saved position exists."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def async_create_task(self, coro):
@@ -51,7 +51,7 @@ def test_validation_fixes_manual_mode_alarm_active_without_position():
 
 def test_validation_keeps_alarm_active_with_saved_position():
     """Test that alarm_active is kept True if we have a valid saved position."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def async_create_task(self, coro):
@@ -94,7 +94,7 @@ def test_validation_keeps_alarm_active_with_saved_position():
 
 def test_validation_enables_awaiting_when_alarm_active_no_position():
     """Test that awaiting_activation_save is enabled when alarm is active but no position saved."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def async_create_task(self, coro):
@@ -141,7 +141,7 @@ def test_validation_enables_awaiting_when_alarm_active_no_position():
 
 def test_validation_does_not_enable_awaiting_when_position_exists():
     """Test that awaiting flag is NOT enabled if we already have a saved position."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def async_create_task(self, coro):
@@ -190,7 +190,7 @@ def test_validation_does_not_enable_awaiting_when_position_exists():
 @pytest.mark.asyncio
 async def test_validation_runs_after_async_load():
     """Test that _validate_and_fix_state is called automatically after async_load."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def async_create_task(self, coro):

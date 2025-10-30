@@ -11,17 +11,17 @@ def test_async_setup_creates_domain_dict():
         def __init__(self):
             self.data = {}
 
-    from custom_components.vehicle_bt_parking_sentinel import async_setup
+    from custom_components.tag_guard_vehicle import async_setup
 
     hass = H()
     res = asyncio.run(async_setup(hass, {}))
     assert res is True
     # domain should be present
-    assert "vehicle_bt_parking_sentinel" in hass.data
+    assert "tag_guard_vehicle" in hass.data
 
 
 def test_validate_and_extract_coords_ignores_payload_when_disallowed():
-    from custom_components.vehicle_bt_parking_sentinel.services import validate_and_extract_coords
+    from custom_components.tag_guard_vehicle.services import validate_and_extract_coords
 
     class FakeCoordinator:
         def __init__(self):
@@ -57,7 +57,7 @@ def test_validate_and_extract_coords_ignores_payload_when_disallowed():
 
 
 def test_handle_webhook_actions_start_and_stop():
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeCoordinator:
         def __init__(self):
@@ -98,7 +98,7 @@ def test_handle_webhook_actions_start_and_stop():
 
 
 def test_sensor_entry_updated_changes_name():
-    from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+    from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
 
     class FakeEntry:
         def __init__(self, data=None, options=None, entry_id="testid"):
@@ -116,9 +116,9 @@ def test_sensor_entry_updated_changes_name():
 
     hass = FakeHass()
     entry = FakeEntry()
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
     # default name
-    assert "Vehicle BT Parking Sentinel" in sensor.name
+    assert "Tag Guard Vehicle" in sensor.name
 
     # simulate entry updated with new options containing device_tracker
     new_entry = FakeEntry(data={}, options={"device_tracker": "device.tracker_x"})
@@ -135,9 +135,9 @@ Tests added:
 
 import asyncio
 
-from custom_components.vehicle_bt_parking_sentinel import async_setup
-from custom_components.vehicle_bt_parking_sentinel.const import DOMAIN
-from custom_components.vehicle_bt_parking_sentinel import services
+from custom_components.tag_guard_vehicle import async_setup
+from custom_components.tag_guard_vehicle.const import DOMAIN
+from custom_components.tag_guard_vehicle import services
 
 
 def test_async_setup_creates_domain_data():
@@ -225,7 +225,7 @@ def test_handle_webhook_impl_start_stop_actions():
 
 
 def test_sensor_name_updates_on_entry_update():
-    from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+    from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
 
     class FakeHass:
         def __init__(self):
@@ -239,7 +239,7 @@ def test_sensor_name_updates_on_entry_update():
 
     hass = FakeHass()
     entry = StubEntry("e1")
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
 
     # simulate an updated entry with options containing device_tracker
     updated_entry = StubEntry("e1", data={}, options={"device_tracker": "device.tracker_42"})

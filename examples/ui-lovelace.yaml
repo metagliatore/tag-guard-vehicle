@@ -6,10 +6,10 @@ views:
       - type: vertical-stack
         cards:
           - type: entities
-            title: Parking Sentinel Status
+            title: Parking Guard Status
             entities:
               - entity: sensor.<your_entry_id>_vehicle_status
-                name: Sentinel Status
+                name: Guard Status
               - type: attribute
                 entity: sensor.<your_entry_id>_vehicle_status
                 attribute: saved_latitude
@@ -38,13 +38,13 @@ views:
                 name: Save Position (Manual)
                 tap_action:
                   action: call-service
-                  service: vehicle_bt_parking_sentinel.manual_trigger
+                  service: tag_guard_vehicle.manual_trigger
                   data: {}
               - type: button
                 name: Toggle Alarm
                 tap_action:
                   action: call-service
-                  service: vehicle_bt_parking_sentinel.toggle_alarm
+                  service: tag_guard_vehicle.toggle_alarm
                   data: {}
           - type: picture-elements
             image: /local/vehicle_screenshot.svg

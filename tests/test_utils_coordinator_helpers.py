@@ -1,6 +1,6 @@
 """Unit tests for helper functions used by the coordinator."""
 
-from custom_components.vehicle_bt_parking_sentinel.utils import (
+from custom_components.tag_guard_vehicle.utils import (
     parse_connection_state,
     extract_coords_from_ops_attrs,
     build_notify_message,

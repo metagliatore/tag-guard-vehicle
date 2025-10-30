@@ -1,0 +1,15 @@
+{
+  "domain": "tag_guard_vehicle",
+  "name": "Tag Guard Vehicle",
+  "codeowners": ["@metagliatore"],
+  "documentation": "https://github.com/metagliatore/tag-guard-vehicle",
+  "issue_tracker": "https://github.com/metagliatore/tag-guard-vehicle/issues",
+  "requirements": [],
+  "dependencies": [],
+  "version": "0.1.0",
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "integration_type": "device",
+  "icon": "mdi:car-connected",
+  "logo": "mdi:parking"
+}

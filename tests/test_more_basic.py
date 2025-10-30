@@ -6,7 +6,7 @@ from aiohttp import web
 
 
 def test_async_get_options_flow_returns_handler():
-    from custom_components.vehicle_bt_parking_sentinel import async_get_options_flow
+    from custom_components.tag_guard_vehicle import async_get_options_flow
 
     class FakeEntry:
         pass
@@ -14,11 +14,11 @@ def test_async_get_options_flow_returns_handler():
     # Should return an options flow handler class instance (awaitable)
     res = asyncio.run(async_get_options_flow(FakeEntry()))
     # Ensure returned object has the expected handler class name
-    assert res.__class__.__name__.endswith("OptionsFlowHandler") or res.__class__.__name__.endswith("VehicleBtParkingSentinelOptionsFlowHandler")
+    assert res.__class__.__name__.endswith("OptionsFlowHandler") or res.__class__.__name__.endswith("TagGuardVehicleOptionsFlowHandler")
 
 
 def test_handle_webhook_impl_get_returns_html():
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeRequest:
         def __init__(self):
@@ -43,7 +43,7 @@ def test_handle_webhook_impl_get_returns_html():
 
 def test_start_reads_from_tracker():
     """Test that start service reads from device_tracker and enables alarm."""
-    from custom_components.vehicle_bt_parking_sentinel.services import async_register_helper_services
+    from custom_components.tag_guard_vehicle.services import async_register_helper_services
     from datetime import datetime
 
     class FakeHass:
@@ -129,7 +129,7 @@ def test_start_reads_from_tracker():
     asyncio.run(async_register_helper_services(hass, coord, "entry_test", "token123"))
 
     # Get start function
-    func = hass._registered_services.get(("vehicle_bt_parking_sentinel", "start"))
+    func = hass._registered_services.get(("tag_guard_vehicle", "start"))
     
     # create a dummy call object with .data attribute
     class Call:

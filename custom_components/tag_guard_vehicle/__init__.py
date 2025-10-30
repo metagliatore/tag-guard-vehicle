@@ -1,4 +1,4 @@
-"""The Vehicle BT Parking Sentinel integration."""
+"""The Tag Guard Vehicle integration."""
 import logging
 
 from homeassistant.core import HomeAssistant
@@ -14,15 +14,17 @@ PLATFORMS = [Platform.SENSOR]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Vehicle BT Parking Sentinel component."""
-    _LOGGER.info("Setting up Vehicle BT Parking Sentinel")
+    """Set up the Tag Guard Vehicle component."""
+    _LOGGER.info("Setting up Tag Guard Vehicle")
     hass.data.setdefault(DOMAIN, {})
+    # Initialize global coordinator registry for multi-instance support
+    hass.data[DOMAIN].setdefault("coordinators", {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Vehicle BT Parking Sentinel from a config entry."""
-    _LOGGER.info("Setting up Vehicle BT Parking Sentinel from a config entry")
+    """Set up Tag Guard Vehicle from a config entry."""
+    _LOGGER.info("Setting up Tag Guard Vehicle from a config entry")
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
     # Register static files from www directory (only once per HA session)
@@ -82,7 +84,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if device_tracker:
         await coordinator.async_initialize_position_if_needed(device_tracker)
     
+    # Store coordinator in both legacy key and global registry
     hass.data[DOMAIN][entry.entry_id + "_coordinator"] = coordinator
+    hass.data[DOMAIN]["coordinators"][entry.entry_id] = coordinator
+    _LOGGER.info("Registered coordinator for entry_id: %s, coordinator_id=%s (total coordinators: %d)", 
+                 entry.entry_id, id(coordinator), len(hass.data[DOMAIN]["coordinators"]))
 
     # start listening to the device tracker configured
     notifier = entry.data.get("notifier")
@@ -90,9 +96,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # register services
     await async_register_services(hass, coordinator, device_tracker, notifier)
+    
     # register webhook and mobile app action listeners
     from .services import async_register_webhook_and_listeners
-    await async_register_webhook_and_listeners(hass, coordinator, device_tracker)
+    from homeassistant.exceptions import ConfigEntryNotReady
+    
+    try:
+        await async_register_webhook_and_listeners(hass, coordinator, device_tracker)
+    except ValueError as e:
+        # Webhook already registered - clear error message
+        _LOGGER.error("Failed to setup integration: %s", str(e))
+        # Cleanup coordinator before failing
+        await coordinator.async_stop()
+        hass.data[DOMAIN].pop(entry.entry_id + "_coordinator", None)
+        hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+        raise ConfigEntryNotReady(
+            f"Webhook registration failed: {str(e)}. "
+            "Please ensure the webhook token is unique across all instances."
+        ) from e
+    except Exception as e:
+        # Unexpected error
+        _LOGGER.error("Unexpected error during webhook registration: %s", str(e))
+        # Cleanup coordinator before failing
+        await coordinator.async_stop()
+        hass.data[DOMAIN].pop(entry.entry_id + "_coordinator", None)
+        hass.data[DOMAIN]["coordinators"].pop(entry.entry_id, None)
+        raise ConfigEntryNotReady(
+            f"Failed to register webhook: {str(e)}"
+        ) from e
 
     # ensure webhook token is persisted in options and expose webhook info service
     options = dict(entry.options or {})
@@ -125,11 +156,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info("Unloading Vehicle BT Parking Sentinel config entry: %s", entry.entry_id)
+    _LOGGER.info("Unloading Tag Guard Vehicle config entry: %s", entry.entry_id)
     
     # Get coordinator before removing from hass.data
     coordinator_key = entry.entry_id + "_coordinator"
     coordinator = hass.data.get(DOMAIN, {}).get(coordinator_key)
+    
+    # Remove from global coordinator registry
+    if entry.entry_id in hass.data.get(DOMAIN, {}).get("coordinators", {}):
+        del hass.data[DOMAIN]["coordinators"][entry.entry_id]
+        _LOGGER.info("Removed coordinator from registry for entry_id: %s", entry.entry_id)
     
     # Stop coordinator (unsubscribe from device_tracker events)
     if coordinator:
@@ -147,6 +183,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         webhook.async_unregister(hass, webhook_id)
         _LOGGER.info("Unregistered webhook: %s", webhook_id)
+        
+        # Remove webhook->entry_id mapping
+        if "_webhook_to_entry" in hass.data.get(DOMAIN, {}):
+            hass.data[DOMAIN]["_webhook_to_entry"].pop(webhook_id, None)
+            _LOGGER.debug("Removed webhook->entry mapping for: %s", webhook_id)
     except Exception as e:
         _LOGGER.debug("Could not unregister webhook %s: %s (may not exist)", webhook_id, e)
     
@@ -161,8 +202,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN].pop(coordinator_key, None)
             _LOGGER.debug("Removed entry data from hass.data: %s", entry.entry_id)
             
+            # If no more coordinators, cleanup global mobile action listener
+            if not hass.data[DOMAIN].get("coordinators"):
+                if "_mobile_action_listener" in hass.data[DOMAIN]:
+                    try:
+                        hass.data[DOMAIN]["_mobile_action_listener"]()
+                        del hass.data[DOMAIN]["_mobile_action_listener"]
+                        _LOGGER.info("Unregistered global mobile_app_notification_action listener (no more instances)")
+                    except Exception as e:
+                        _LOGGER.debug("Could not unregister mobile action listener: %s", e)
+            
             # If no more entries, clean up domain data
-            if not hass.data[DOMAIN]:
+            if not hass.data[DOMAIN] or (len(hass.data[DOMAIN]) == 1 and "coordinators" in hass.data[DOMAIN] and not hass.data[DOMAIN]["coordinators"]):
                 hass.data.pop(DOMAIN)
                 _LOGGER.debug("Removed empty DOMAIN from hass.data")
 
@@ -171,9 +222,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_get_options_flow(config_entry):
-    from .options_flow import VehicleBtParkingSentinelOptionsFlowHandler
+    from .options_flow import TagGuardVehicleOptionsFlowHandler
 
-    return VehicleBtParkingSentinelOptionsFlowHandler(config_entry)
+    return TagGuardVehicleOptionsFlowHandler(config_entry)
 
 
 async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
@@ -181,7 +232,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
     
     This registers the card JavaScript file so users don't need to manually
     add it via the Resources UI. The card will be available as:
-    custom:vehicle-bt-parking-sentinel-card
+    custom:tag-guard-vehicle-card
     """
     try:
         # Use the lovelace resources API to register the card
@@ -191,7 +242,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
         # /hacsfiles/<domain>/<file> or for local custom_components:
         # /<domain>/<file> when served from custom_components/<domain>/www/
         # Register frontend resource (Lovelace card)
-        resource_url = f"/{DOMAIN}/vehicle-bt-parking-sentinel-card-v2.js"
+        resource_url = f"/{DOMAIN}/tag-guard-vehicle-card.js"
         
         # Check if resource already registered
         # ResourceStorageCollection might not have .values() method in all HA versions
@@ -264,7 +315,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
                 _LOGGER.warning(
                     "Could not auto-register Lovelace resource. "
                     "Manually add it at Settings → Dashboards → Resources: "
-                    "URL=/%s/vehicle-bt-parking-sentinel-card-v2.js, Type=module", DOMAIN
+                    "URL=/%s/tag-guard-vehicle-card.js, Type=module", DOMAIN
                 )
         else:
             _LOGGER.debug("Lovelace resources not available, skipping auto-registration")
@@ -273,6 +324,6 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
         _LOGGER.warning(
             "Could not auto-register Lovelace card resource (%s). "
             "To use the custom card, manually register it at Settings → Dashboards → Resources: "
-            "URL=/%s/vehicle-bt-parking-sentinel-card-v2.js, Type=module",
+            "URL=/%s/tag-guard-vehicle-card.js, Type=module",
             e, DOMAIN
         )

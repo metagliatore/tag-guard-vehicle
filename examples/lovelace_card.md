@@ -1,4 +1,4 @@
-# Lovelace Examples for Vehicle BT Parking Sentinel
+# Lovelace Examples for Tag Guard Vehicle
 
 This file contains YAML snippets you can copy to your Lovelace interface to display sensor state and add manual actions.
 
@@ -13,7 +13,7 @@ type: entities
 title: Vehicle Status
 entities:
   - entity: sensor.<your_entry_id>_vehicle_status
-    name: Parking Sentinel
+    name: Parking guard
   - type: attribute
     entity: sensor.<your_entry_id>_vehicle_status
     attribute: saved_latitude
@@ -80,13 +80,13 @@ cards:
         name: Save Position (Manual)
         tap_action:
           action: call-service
-          service: vehicle_bt_parking_sentinel.manual_trigger
+          service: tag_guard_vehicle.manual_trigger
           data: {}
       - type: button
         name: Toggle Alarm
         tap_action:
           action: call-service
-          service: vehicle_bt_parking_sentinel.toggle_alarm
+          service: tag_guard_vehicle.toggle_alarm
           data: {}
 ```
 

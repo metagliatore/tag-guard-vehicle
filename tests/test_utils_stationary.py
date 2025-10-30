@@ -1,6 +1,6 @@
 """Tests for stationary detection algorithms and counters."""
 
-from custom_components.vehicle_bt_parking_sentinel.utils import update_stationary_counter, haversine_distance
+from custom_components.tag_guard_vehicle.utils import update_stationary_counter, haversine_distance
 
 
 # Test: new candidate is initialized and counter starts at 1

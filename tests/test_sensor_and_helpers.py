@@ -7,8 +7,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
-from custom_components.vehicle_bt_parking_sentinel import services
+from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
+from custom_components.tag_guard_vehicle import services
 
 
 class FakeEntry:
@@ -46,9 +46,9 @@ def test_sensor_builds_attributes_from_coordinator():
     hass = FakeHass()
     entry = FakeEntry('testid')
     coord = FakeCoordinator()
-    hass.data['vehicle_bt_parking_sentinel'] = {entry.entry_id + '_coordinator': coord}
+    hass.data['tag_guard_vehicle'] = {entry.entry_id + '_coordinator': coord}
 
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
 
     # before update
     assert sensor.state == 'unknown'

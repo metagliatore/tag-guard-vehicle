@@ -18,7 +18,7 @@
       "activation_mode_help": "Режим активации: connection, position, combined или manual.",
       "tag_model_help": "Модель Bluetooth-метки – некоторые модели сообщают координаты по-разному.",
       "webhook_help": "Необязательно: введите собственный токен webhook или оставьте пустым для генерации.",
-      "control_title": "Vehicle BT Parking Sentinel — Управление",
+      "control_title": "Tag Guard Vehicle — Управление",
       "control_description": "Используйте кнопки, чтобы запустить/остановить контроль или сохранить позицию.",
       "start_button": "Запустить (включить)",
       "stop_button": "Остановить (выключить)",

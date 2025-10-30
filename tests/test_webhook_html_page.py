@@ -7,7 +7,7 @@ from aiohttp import web
 @pytest.mark.asyncio
 async def test_webhook_get_returns_html_page():
     """Test that GET request to webhook returns an HTML page."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
 
     class FakeHass:
         pass

@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_handle_device_event_with_none_new_state_returns_early():
     """Test that _handle_device_event returns early when new_state is None."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -39,7 +39,7 @@ async def test_handle_device_event_with_none_new_state_returns_early():
 @pytest.mark.asyncio
 async def test_set_alarm_active_false_preserves_saved_position():
     """Test that disabling alarm preserves the saved position."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -73,7 +73,7 @@ async def test_set_alarm_active_false_preserves_saved_position():
 @pytest.mark.asyncio
 async def test_has_moved_returns_false_without_saved_position():
     """Test has_moved returns False when no saved position (cannot determine movement)."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -99,7 +99,7 @@ async def test_has_moved_returns_false_without_saved_position():
 @pytest.mark.asyncio
 async def test_has_moved_returns_false_within_tolerance():
     """Test has_moved returns False when within tolerance."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):
@@ -127,7 +127,7 @@ async def test_has_moved_returns_false_within_tolerance():
 @pytest.mark.asyncio
 async def test_has_moved_returns_true_outside_tolerance():
     """Test has_moved returns True when outside tolerance."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
     class FakeHass:
         def async_create_task(self, coro):

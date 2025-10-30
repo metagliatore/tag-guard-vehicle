@@ -15,7 +15,7 @@ from aiohttp import web
 
 def test_manual_mode_starts_with_alarm_disabled():
     """Test that manual mode always starts with alarm_active=False."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def __init__(self):
@@ -60,7 +60,7 @@ def test_manual_mode_starts_with_alarm_disabled():
 
 def test_webhook_start_enables_alarm():
     """Test that webhook START command enables alarm."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
     
     class FakeHass:
         def __init__(self):
@@ -102,7 +102,7 @@ def test_webhook_start_enables_alarm():
 
 def test_webhook_stop_disables_alarm():
     """Test that webhook STOP command disables alarm."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
     
     class FakeHass:
         def __init__(self):
@@ -144,7 +144,7 @@ def test_webhook_stop_disables_alarm():
 
 def test_webhook_save_stores_position():
     """Test that webhook SAVE command saves position from device_tracker."""
-    from custom_components.vehicle_bt_parking_sentinel.services import handle_webhook_impl
+    from custom_components.tag_guard_vehicle.services import handle_webhook_impl
     
     class FakeState:
         def __init__(self):
@@ -199,7 +199,7 @@ def test_webhook_save_stores_position():
 
 def test_manual_mode_full_flow():
     """Test complete manual mode flow: load -> save -> start -> stop."""
-    from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
         def __init__(self):

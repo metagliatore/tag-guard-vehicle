@@ -1,8 +1,8 @@
 """Helpers for config flow: validate payload and options creation.
 """
 
-from custom_components.vehicle_bt_parking_sentinel.utils import needs_stationary_step, build_create_payload
-from custom_components.vehicle_bt_parking_sentinel.const import (
+from custom_components.tag_guard_vehicle.utils import needs_stationary_step, build_create_payload
+from custom_components.tag_guard_vehicle.const import (
     CONF_DEVICE_TRACKER,
     CONF_ACTIVATION_MODE,
     CONF_STATIONARY_MINUTES,

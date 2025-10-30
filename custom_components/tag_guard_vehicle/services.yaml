@@ -1,0 +1,143 @@
+save_position:
+  name: Save Position
+  description: Force-save the current device_tracker position.
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+manual_trigger:
+  name: Manual Trigger
+  description: Quick activation of parking monitoring. Saves current device_tracker position and enables the alarm. This is a shortcut alternative to the smart activation modes (connection/position/combined).
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+reset_flags:
+  name: Reset Flags
+  description: Reset notification flags to allow movement notifications again.
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+clear_persisted:
+  name: Clear Persisted
+  description: Clear saved coordinates, reset flags and disable the alarm.
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+mute_notifications:
+  name: Mute notifications
+  description: Silence notifications but keep alarm monitoring active
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+unmute_notifications:
+  name: Unmute notifications
+  description: Re-enable notifications
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+start:
+  name: Start Guard
+  description: Enable the parking guard alarm monitoring
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+    notify_waiting:
+      name: Notify when waiting for GPS
+      description: Send notification if waiting for a fresh GPS position
+      required: false
+      default: false
+      selector:
+        boolean:
+
+stop:
+  name: Stop Guard
+  description: Disable the parking guard alarm monitoring
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+get_webhook_info:
+  name: Get Webhook Info
+  description: Return webhook URL and token for the entry.
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to query
+      required: true
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+toggle_alarm:
+  name: Toggle Alarm
+  description: Toggle the alarm state for the coordinator (deprecated, use start/stop instead).
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to control (leave empty to apply to all instances)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+cleanup_webhooks:
+  name: Cleanup Webhooks
+  description: Remove old/orphaned webhook registrations
+  fields:
+    config_entry:
+      name: Configuration Entry
+      description: Which Tag Guard Vehicle instance to cleanup (leave empty to cleanup all)
+      required: false
+      example: "01234567890abcdef"
+      selector:
+        text:
+
+list_webhooks:
+  name: List Webhooks
+  description: List all registered webhooks in Home Assistant
+  fields: {}

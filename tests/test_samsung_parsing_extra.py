@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from custom_components.vehicle_bt_parking_sentinel import utils
+from custom_components.tag_guard_vehicle import utils
 
 
 BASE_SAMPLE = {

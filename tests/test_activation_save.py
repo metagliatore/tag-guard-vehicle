@@ -1,7 +1,7 @@
-"""Tests for save-on-activation behavior when enabling the sentinel."""
+"""Tests for save-on-activation behavior when enabling the monitoring."""
 import asyncio
 
-from custom_components.vehicle_bt_parking_sentinel.coordinator import VehicleCoordinator
+from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
 
 
 class FakeHass:

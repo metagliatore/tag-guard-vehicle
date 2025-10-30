@@ -1,4 +1,4 @@
-"""Options flow for Vehicle BT Parking Sentinel."""
+"""Options flow for Tag Guard Vehicle."""
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -22,26 +22,55 @@ from .const import (
     CONF_STATIONARY_MINUTES,
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
+    CONF_WEBHOOK_TOKEN,
     TAG_MODELS,
+    DOMAIN,
 )
 from .utils import translate
+
+
+def is_webhook_token_in_use(hass, token, exclude_entry_id=None):
+    """Check if a webhook token is already in use by another entry."""
+    if not token:
+        return False
+    
+    entries = hass.config_entries.async_entries(DOMAIN)
+    for entry in entries:
+        if exclude_entry_id and entry.entry_id == exclude_entry_id:
+            continue
+        existing_token = entry.options.get(CONF_WEBHOOK_TOKEN) or entry.data.get(CONF_WEBHOOK_TOKEN)
+        if existing_token == token:
+            return True
+    return False
  
 
 
-class VehicleBtParkingSentinelOptionsFlowHandler(config_entries.OptionsFlow):
+class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Initial options step: collect main options; branch to stationary if needed."""
         current = self.config_entry.options or {}
+        errors = {}
+        
         if user_input is not None:
-            # if activation requires stationary params, keep partial and ask
-            activation = user_input.get(CONF_ACTIVATION_MODE, current.get(CONF_ACTIVATION_MODE))
-            self._user_input = {**current, **user_input}
-            if activation in ("position", "combined"):
-                return await self.async_step_stationary()
-            return self.async_create_entry(title="Options updated", data=self._user_input)
+            # Validate webhook token uniqueness if provided and different from current
+            new_token = user_input.get("webhook_token", "").strip()
+            current_token = current.get(CONF_WEBHOOK_TOKEN, "")
+            
+            if new_token and new_token != current_token:
+                hass = getattr(self, "hass", None) or getattr(self.config_entry, "hass", None)
+                if hass and is_webhook_token_in_use(hass, new_token, self.config_entry.entry_id):
+                    errors["webhook_token"] = "webhook_token_in_use"
+            
+            if not errors:
+                # if activation requires stationary params, keep partial and ask
+                activation = user_input.get(CONF_ACTIVATION_MODE, current.get(CONF_ACTIVATION_MODE))
+                self._user_input = {**current, **user_input}
+                if activation in ("position", "combined"):
+                    return await self.async_step_stationary()
+                return self.async_create_entry(title="Options updated", data=self._user_input)
 
         # show initial options form
         if user_input is None:
@@ -85,6 +114,7 @@ class VehicleBtParkingSentinelOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required("debug_mode", default=current.get("debug_mode", False)): BooleanSelector(BooleanSelectorConfig()),
                 }
             ),
+                errors=errors,
                 description_placeholders={"activation_help": activation_help},
             )
 

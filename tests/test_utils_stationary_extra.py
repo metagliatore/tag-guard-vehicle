@@ -1,6 +1,6 @@
 """Additional tests covering edge cases of stationary detection logic."""
 
-from custom_components.vehicle_bt_parking_sentinel.utils import coerce_coords, should_save_after_stationary
+from custom_components.tag_guard_vehicle.utils import coerce_coords, should_save_after_stationary
 
 
 # Test: coerce_coords parses numeric strings into floats

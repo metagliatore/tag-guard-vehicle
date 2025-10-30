@@ -1,4 +1,9 @@
 {
+  "config": {
+    "error": {
+      "webhook_token_in_use": "Questo token webhook è già in uso da un'altra istanza. Utilizzare un token diverso."
+    }
+  },
   "entity": {
     "sensor": {
       "vehicle_status": {
@@ -31,8 +36,8 @@
       "activation_mode_help": "Modalità di attivazione: connection, position, combined, o manual.",
       "tag_model_help": "Modello del tag Bluetooth – alcuni modelli riportano coordinate in modo differente.",
       "webhook_help": "Opzionale: inserisci un token webhook personalizzato oppure lascia vuoto per generarne uno.",
-      "control_title": "Vehicle BT Parking Sentinel — Controllo",
-      "control_description": "Usa i pulsanti per avviare/interrompere la sentinella o triggerare un salvataggio.",
+      "control_title": "Tag Guard Vehicle — Controllo",
+      "control_description": "Usa i pulsanti per avviare/interrompere la guardla o triggerare un salvataggio.",
       "start_button": "Avvia (abilita)",
       "stop_button": "Ferma (disabilita)",
       "save_button": "Salva posizione ora",

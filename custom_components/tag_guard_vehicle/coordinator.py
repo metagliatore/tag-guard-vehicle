@@ -1,4 +1,4 @@
-"""Coordinator for Vehicle BT Parking Sentinel.
+"""Coordinator for Tag Guard Vehicle.
 
 Handles listening to device_tracker changes, saving/loading parking
 position, stationary detection and sending notifications.
@@ -76,7 +76,7 @@ class VehicleCoordinator:
 
         # runtime helpers
         self._unsub_track = None
-        self._unsub_mobile_action = None  # Track mobile_app_notification_action listener
+        # Note: mobile_app_notification_action listener is now global (services.py)
         self._stationary_handle = None
         # flag indicating we enabled alarm but have not yet found a fresh GPS to save
         self._awaiting_activation_save = False
@@ -316,10 +316,38 @@ class VehicleCoordinator:
             pass
 
     async def async_start(self, device_tracker_entity: str):
+        # Store device_tracker entity for reference (useful for multi-instance logging)
+        self.device_tracker_entity = device_tracker_entity
         # subscribe to device_tracker state changes
         self._unsub_track = async_track_state_change_event(
             self.hass, [device_tracker_entity], self._async_device_tracker_changed
         )
+    
+    def get_vehicle_name(self) -> str:
+        """Get a friendly name for this vehicle instance.
+        
+        Priority:
+        1. Friendly name from device_tracker state
+        2. Device tracker entity name
+        3. "Vehicle"
+        """
+        if not hasattr(self, 'device_tracker_entity'):
+            return "Vehicle"
+        
+        try:
+            # Try to get friendly_name from device_tracker state
+            state = self.hass.states.get(self.device_tracker_entity)
+            if state:
+                friendly_name = state.attributes.get("friendly_name")
+                if friendly_name:
+                    return friendly_name
+            
+            # Fallback to entity name (remove domain prefix)
+            entity_name = self.device_tracker_entity.replace("device_tracker.", "")
+            # Make it more readable: replace underscores with spaces and title case
+            return entity_name.replace("_", " ").title()
+        except Exception:
+            return "Vehicle"
 
     async def async_stop(self):
         """Stop coordinator and cleanup all listeners."""
@@ -328,10 +356,8 @@ class VehicleCoordinator:
             self._unsub_track()
             self._unsub_track = None
         
-        # Unsubscribe from mobile_app_notification_action
-        if self._unsub_mobile_action:
-            self._unsub_mobile_action()
-            self._unsub_mobile_action = None
+        # Note: _unsub_mobile_action is now managed globally in services.py
+        # and shared across all instances, so we don't unsubscribe here
         
         # Cancel any pending stationary timer
         if self._stationary_handle:
@@ -524,12 +550,17 @@ class VehicleCoordinator:
         """
         previous = bool(getattr(self, "alarm_active", False))
         self.alarm_active = bool(active)
-        _LOGGER.info("Alarm active changed: %s -> %s", previous, self.alarm_active)
+        _LOGGER.info("Alarm active changed: %s -> %s (entry_id=%s, device_tracker=%s, coordinator_id=%s)", 
+                     previous, self.alarm_active, self.entry_id, 
+                     self.config.get("device_tracker"), id(self))
         await self.async_save()
+        _LOGGER.debug("State saved after alarm_active change (entry_id=%s, coordinator_id=%s)", 
+                     self.entry_id, id(self))
 
         # If we're enabling (either fresh enable OR re-enable while already active)
         # In case of re-enable, reset the awaiting flag to search for fresh GPS again
         if self.alarm_active:
+            _LOGGER.debug("Alarm enabled - attempting to save position (entry_id=%s)", self.entry_id)
             # Reset awaiting flag - this allows re-starting the position search
             self._awaiting_activation_save = False
             
@@ -549,8 +580,10 @@ class VehicleCoordinator:
 
             # attempt to read coords from configured device tracker
             device_entity = self.config.get("device_tracker")
+            _LOGGER.debug("Looking up device_tracker: %s (entry_id=%s)", device_entity, self.entry_id)
             if device_entity:
                 state = self.hass.states.get(device_entity)
+                _LOGGER.debug("Device state retrieved: %s (entry_id=%s)", "found" if state else "NOT FOUND", self.entry_id)
                 if state:
                     try:
                         from .utils import extract_coords_from_ops_attrs_by_model, safe_get
@@ -563,22 +596,36 @@ class VehicleCoordinator:
                         # Track whether we successfully saved
                         saved = False
                         
+                        _LOGGER.debug("Position check: act_ts=%s, gpsUtcDt=%s, lat=%s, lon=%s (entry_id=%s)", 
+                                     act_ts, gpsUtcDt, lat, lon, self.entry_id)
+                        
                         # only accept numeric YYYYMMDDHHMMSS style timestamps for now
                         if act_ts and gpsUtcDt and str(gpsUtcDt).isdigit():
                             try:
                                 if int(str(gpsUtcDt)) > int(str(act_ts)):
                                     if lat is not None and lon is not None:
+                                        _LOGGER.info("Saving position on activation: GPS is newer (entry_id=%s)", self.entry_id)
                                         await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=None, last_seen=state.attributes.get("last_seen"), reason="start")
                                         saved = True
-                            except Exception:
+                                    else:
+                                        _LOGGER.debug("GPS newer but coords missing (entry_id=%s)", self.entry_id)
+                                else:
+                                    _LOGGER.debug("GPS not newer: %s <= %s (entry_id=%s)", gpsUtcDt, act_ts, self.entry_id)
+                            except Exception as e:
                                 # parsing/comparison issues -> ignore
+                                _LOGGER.debug("Exception comparing timestamps: %s (entry_id=%s)", e, self.entry_id)
                                 pass
+                        else:
+                            _LOGGER.debug("Timestamp validation failed (entry_id=%s)", self.entry_id)
                         
                         # If we didn't save (GPS missing, not numeric, or not newer), set awaiting flag
                         if not saved:
                             self._awaiting_activation_save = True
                             self._activation_time_str = act_ts
-                            _LOGGER.debug("Awaiting fresh GPS after activation: activation_time=%s device=%s gpsUtcDt=%s", act_ts, device_entity, gpsUtcDt)
+                            _LOGGER.info("Awaiting fresh GPS after activation: activation_time=%s device=%s gpsUtcDt=%s (entry_id=%s)", 
+                                        act_ts, device_entity, gpsUtcDt, self.entry_id)
+                        else:
+                            _LOGGER.info("Position saved on activation (entry_id=%s)", self.entry_id)
                             # Notify sensor immediately to show awaiting_position state
                             try:
                                 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -590,7 +637,9 @@ class VehicleCoordinator:
                             if notify_waiting and self.notifier:
                                 try:
                                     from .utils import translate
-                                    title = await translate(self.hass, "messages.manual_trigger_awaiting_title", "⏳ Parking sentinel activating...")
+                                    vehicle_name = self.get_vehicle_name()
+                                    title = await translate(self.hass, "messages.manual_trigger_awaiting_title", "⏳ parking guard activating...")
+                                    title = f"{title} [{vehicle_name}]"
                                     message = await translate(self.hass, "messages.manual_trigger_awaiting_message", "Waiting for fresh GPS position to save parking location.")
                                     await self.hass.services.async_call(
                                         "notify",
@@ -601,11 +650,29 @@ class VehicleCoordinator:
                                     _LOGGER.exception("Failed to send waiting notification")
                     except Exception:
                         # suppress any exceptions from this best-effort save
-                        _LOGGER.exception("Error while attempting save-on-activation")
+                        _LOGGER.exception("Error while attempting save-on-activation (entry_id=%s)", self.entry_id)
+        
+        _LOGGER.info("set_alarm_active completed: alarm_active=%s (entry_id=%s)", self.alarm_active, self.entry_id)
 
     async def async_handle_action(self, action: str, data: dict[str, Any] | None = None) -> None:
-        """Handle a notification action from mobile app."""
+        """Handle a notification action from mobile app.
+        
+        Actions can be in format "ACTION_NAME" or "ACTION_NAME_<entry_id>" for multi-instance support.
+        """
         action = normalize_notification_action(action)
+        
+        # Check if action includes entry_id suffix for multi-instance support
+        # Format: "DISABLE_ALARM_<entry_id>" or "OPEN_MAP_<entry_id>"
+        action_parts = action.rsplit("_", 1)
+        if len(action_parts) == 2:
+            base_action, target_entry_id = action_parts
+            # Check if this action is meant for this coordinator
+            if target_entry_id != self.entry_id:
+                _LOGGER.debug("Action %s not for this coordinator (target=%s, this=%s)", 
+                             action, target_entry_id, self.entry_id)
+                return
+            action = base_action  # Use base action name for processing
+        
         if action == "DISABLE_ALARM":
             await self.set_alarm_active(False)
             _LOGGER.info("Alarm disabled via notification action")
@@ -613,12 +680,14 @@ class VehicleCoordinator:
             if self.notifier:
                 try:
                     from .utils import translate
-
+                    vehicle_name = self.get_vehicle_name()
                     title = await translate(self.hass, "messages.alarm_disabled", "Alarm disabled via notification")
                     notif_title = await translate(self.hass, "messages.vehicle_tracker_title", "Vehicle Tracker")
+                    notif_title = f"{notif_title} [{vehicle_name}]"
                 except Exception:
+                    vehicle_name = self.get_vehicle_name()
                     title = "Alarm disabled via notification"
-                    notif_title = "Vehicle Tracker"
+                    notif_title = f"Vehicle Tracker [{vehicle_name}]"
                 await self.hass.services.async_call(
                     "notify",
                     self.notifier,
@@ -630,10 +699,12 @@ class VehicleCoordinator:
                 url = format_map_url(self.saved_latitude, self.saved_longitude)
                 try:
                     from .utils import translate
-
+                    vehicle_name = self.get_vehicle_name()
                     notif_title = await translate(self.hass, "messages.open_map_title", "Open map")
+                    notif_title = f"{notif_title} [{vehicle_name}]"
                 except Exception:
-                    notif_title = "Open map"
+                    vehicle_name = self.get_vehicle_name()
+                    notif_title = f"Open map [{vehicle_name}]"
                 await self.hass.services.async_call(
                     "notify",
                     self.notifier,
@@ -712,9 +783,13 @@ class VehicleCoordinator:
                 service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
                 map_url = f"https://maps.google.com/?q={lat},{lon}"
                 
+                # Get vehicle name for multi-instance identification
+                vehicle_name = self.get_vehicle_name()
+                
                 # Build message based on reason using translations
                 if reason == "start":
                     title = await translate(self.hass, "messages.monitoring_activated_title", "🟢 Monitoring activated")
+                    title = f"{title} [{vehicle_name}]"
                     message_template = await translate(
                         self.hass, 
                         "messages.monitoring_activated_message", 
@@ -723,6 +798,7 @@ class VehicleCoordinator:
                     message = message_template.format(map_url=map_url)
                 else:  # reason == "save"
                     title = await translate(self.hass, "messages.position_saved_title", "📍 Position saved")
+                    title = f"{title} [{vehicle_name}]"
                     message_template = await translate(
                         self.hass,
                         "messages.position_saved_message",
@@ -854,7 +930,13 @@ class VehicleCoordinator:
         saved_url = f"https://maps.google.com/?q={self.saved_latitude},{self.saved_longitude}"
         current_url = f"https://maps.google.com/?q={lat},{lon}"
         
+        # Get vehicle name for multi-instance identification
+        vehicle_name = self.get_vehicle_name()
+        
         title = await translate(self.hass, "messages.moved_title", "🚨 Vehicle moved!")
+        # Add vehicle name to title for multi-instance support
+        title = f"{title} [{vehicle_name}]"
+        
         message_template = await translate(
             self.hass,
             "messages.moved_message",

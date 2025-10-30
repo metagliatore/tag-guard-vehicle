@@ -1,4 +1,9 @@
 {
+  "config": {
+    "error": {
+      "webhook_token_in_use": "This webhook token is already in use by another instance. Please use a different token."
+    }
+  },
   "entity": {
     "sensor": {
       "vehicle_status": {
@@ -31,8 +36,8 @@
   "activation_mode_help": "Choose activation mode: 'connection' (save on disconnect), 'position' (save after stable location), 'combined' (both), 'manual' (manual saves).",
   "tag_model_help": "Bluetooth tag model – some models report coordinates differently (e.g. Samsung SmartTag, Tile).",
   "webhook_help": "Optional: enter a custom webhook token (e.g. my-token-123), or leave empty to have one generated.",
-      "control_title": "Vehicle BT Parking Sentinel — Control",
-      "control_description": "Use the buttons to start/stop the sentinel or trigger a save.",
+      "control_title": "Tag Guard Vehicle — Control",
+      "control_description": "Use the buttons to start/stop the guard or trigger a save.",
       "start_button": "Start (enable)",
       "stop_button": "Stop (disable)",
       "save_button": "Trigger save now",

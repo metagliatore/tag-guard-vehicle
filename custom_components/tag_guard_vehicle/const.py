@@ -1,6 +1,6 @@
-"""Constants for the Vehicle BT Parking Sentinel integration."""
+"""Constants for the Tag Guard Vehicle integration."""
 
-DOMAIN = "vehicle_bt_parking_sentinel"
+DOMAIN = "tag_guard_vehicle"
 
 # Configuration constants
 CONF_DEVICE_TRACKER = "device_tracker"
@@ -27,6 +27,6 @@ TAG_MODELS = {
 # same key name.
 
 # Activation modes supported by the integration. "manual" is a mode where the
-# sentinel must be activated manually by the user (it is always available and
+# guard must be activated manually by the user (it is always available and
 # does not require stationary parameters).
 ACTIVATION_MODES = ["connection", "position", "combined", "manual"]

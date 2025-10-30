@@ -3,7 +3,7 @@
 
 import pytest
 
-from custom_components.vehicle_bt_parking_sentinel.sensor import VehicleBtParkingSentinelSensor
+from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
 
 
 class FakeEntry:
@@ -40,9 +40,9 @@ async def test_sensor_states_and_attributes():
     hass = FakeHass()
     entry = FakeEntry("e1")
     coord = FakeCoordinator()
-    hass.data["vehicle_bt_parking_sentinel"] = {entry.entry_id + "_coordinator": coord}
+    hass.data["tag_guard_vehicle"] = {entry.entry_id + "_coordinator": coord}
 
-    sensor = VehicleBtParkingSentinelSensor(hass, entry)
+    sensor = TagGuardVehicleSensor(hass, entry)
 
     # initial unknown (no position, alarm disabled)
     assert sensor.state == "unknown"

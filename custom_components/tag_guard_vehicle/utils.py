@@ -1,4 +1,4 @@
-"""Utility functions for Vehicle BT Parking Sentinel."""
+"""Utility functions for Tag Guard Vehicle."""
 from .const import (
     CONF_DEVICE_TRACKER,
     CONF_PERSON_ENTITY,
