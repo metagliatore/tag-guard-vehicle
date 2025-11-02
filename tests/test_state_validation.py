@@ -4,7 +4,11 @@ import pytest
 
 
 def test_validation_fixes_manual_mode_alarm_active_without_position():
-    """Test that alarm_active is reset to False in manual mode when no saved position exists."""
+    """Test that all modes now start with alarm_active=False regardless of storage.
+    
+    This test verifies the new behavior: all activation modes initialize with
+    alarm_active=False, even if storage contains alarm_active=True from a previous session.
+    """
     from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
@@ -14,8 +18,8 @@ def test_validation_fixes_manual_mode_alarm_active_without_position():
     
     class FakeStore:
         async def async_load(self):
-            # Simulate a store with inconsistent state:
-            # manual mode but alarm_active was True from a previous version
+            # Storage contains alarm_active=True from previous session
+            # But new behavior: all modes ignore this and start with False
             return {
                 "saved_latitude": None,
                 "saved_longitude": None,
@@ -24,6 +28,7 @@ def test_validation_fixes_manual_mode_alarm_active_without_position():
                 "saved_last_seen": None,
                 "position_notified": False,
                 "last_tag_state": "connected",
+                "alarm_active": True,  # This will be ignored
             }
         
         async def async_save(self, data):
@@ -39,13 +44,13 @@ def test_validation_fixes_manual_mode_alarm_active_without_position():
     coord = VehicleCoordinator(hass, "test_entry_id", config)
     coord.store = FakeStore()
     
-    # Before validation, manually set alarm_active to True (simulating old state)
-    coord.alarm_active = True
+    # New behavior: alarm_active always starts False (ignores storage)
+    assert coord.alarm_active is False
     
-    # Call validation
+    # Call validation (shouldn't change anything now)
     coord._validate_and_fix_state()
     
-    # After validation, alarm_active should be False (no saved position in manual mode)
+    # After validation, alarm_active should still be False
     assert coord.alarm_active is False
 
 
@@ -93,7 +98,11 @@ def test_validation_keeps_alarm_active_with_saved_position():
 
 
 def test_validation_enables_awaiting_when_alarm_active_no_position():
-    """Test that awaiting_activation_save is enabled when alarm is active but no position saved."""
+    """Test that awaiting_activation_save is enabled when alarm is active but no position saved.
+    
+    NEW BEHAVIOR: All modes start with alarm_active=False, so we need to manually
+    activate the alarm first, then validation should enable awaiting flag.
+    """
     from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
     
     class FakeHass:
@@ -118,15 +127,18 @@ def test_validation_enables_awaiting_when_alarm_active_no_position():
     hass = FakeHass()
     config = {
         "device_tracker": "device.tracker_test",
-        "activation_mode": "connection",  # non-manual mode, so alarm starts True
+        "activation_mode": "position",
         "debug_mode": True,
     }
     
     coord = VehicleCoordinator(hass, "test_entry_id", config)
     coord.store = FakeStore()
     
-    # alarm_active defaults to True in connection mode
-    assert coord.alarm_active is True
+    # New behavior: all modes start with alarm_active=False
+    assert coord.alarm_active is False
+    
+    # Manually activate alarm (simulating user/automatic activation)
+    coord.alarm_active = True
     
     # awaiting flag is False by default
     coord._awaiting_activation_save = False
@@ -174,8 +186,8 @@ def test_validation_does_not_enable_awaiting_when_position_exists():
     coord.saved_latitude = 45.5
     coord.saved_longitude = 9.2
     
-    # alarm_active defaults to True
-    assert coord.alarm_active is True
+    # Connection mode starts with alarm_active False (like manual mode)
+    assert coord.alarm_active is False
     
     # awaiting flag starts False
     coord._awaiting_activation_save = False

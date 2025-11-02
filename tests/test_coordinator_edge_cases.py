@@ -67,7 +67,13 @@ async def test_handle_device_event_connection_state_change():
             async def async_call(self, domain, service, data):
                 self.calls.append((domain, service, data))
 
+        class States:
+            def get(self, entity_id):
+                # Return None - no device_tracker state available
+                return None
+
         services = Services()
+        states = States()
 
     class FakeStore:
         async def async_load(self):

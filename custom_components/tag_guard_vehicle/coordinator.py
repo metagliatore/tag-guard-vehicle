@@ -66,12 +66,15 @@ class VehicleCoordinator:
         self.tolerance_radius = float(config.get(CONF_TOLERANCE_RADIUS, 200))
         self.stationary_minutes = int(config.get(CONF_STATIONARY_MINUTES, 10))
         self.stationary_count = int(config.get(CONF_STATIONARY_COUNT, 3))
-        # In 'manual' activation mode the alarm should be off by default.
-        # For other modes keep the legacy behavior of enabled by default.
+        # All activation modes start with alarm OFF
+        # - Manual: user activates explicitly
+        # - Connection: alarm activates automatically on disconnect event
+        # - Position: alarm activates when vehicle becomes stationary
+        # - Combined: alarm activates when both stationary AND disconnected
         try:
-            self.alarm_active = False if str(self.activation_mode) == "manual" else True
+            self.alarm_active = False
         except Exception:
-            self.alarm_active = True
+            self.alarm_active = False
         self.debug_mode = bool(config.get("debug_mode", False))
 
         # runtime helpers
@@ -125,18 +128,16 @@ class VehicleCoordinator:
             self.saved_last_seen = data.get("saved_last_seen")
             self.position_notified = data.get("position_notified", False)
             self.last_tag_state = data.get("last_tag_state")
-            # Load alarm_active ONLY if NOT in manual mode
-            # In manual mode, always start with alarm_active = False
-            if "alarm_active" in data and str(self.activation_mode) != "manual":
-                self.alarm_active = data.get("alarm_active", False)
-                _LOGGER.debug("Restored alarm_active from storage: %s (mode=%s)", self.alarm_active, self.activation_mode)
-            elif str(self.activation_mode) == "manual":
-                # Manual mode always starts with alarm disabled
-                self.alarm_active = False
-                _LOGGER.debug("Manual mode detected - forcing alarm_active=False (mode=%s)", self.activation_mode)
-            else:
-                # No alarm_active in storage and not manual mode - use default
-                _LOGGER.debug("No alarm_active in storage, using default: %s (mode=%s)", self.alarm_active, self.activation_mode)
+            # All activation modes always start with alarm_active = False
+            # The alarm will be activated automatically when the trigger condition occurs:
+            # - Manual: user must explicitly activate via start command
+            # - Connection: waits for disconnect event to activate
+            # - Position: activates when vehicle becomes stationary
+            # - Combined: activates when both stationary AND disconnected
+            # This ensures consistent behavior across all modes and avoids confusion
+            # about whether the alarm is actually monitoring or not at startup.
+            self.alarm_active = False
+            _LOGGER.debug("Initialization: alarm_active set to False for all modes (mode=%s)", self.activation_mode)
 
         # Validate state consistency after loading from store
         self._validate_and_fix_state()
@@ -234,42 +235,33 @@ class VehicleCoordinator:
         - Manual edits to the storage file
         
         Common issues fixed:
-        1. alarm_active=True in manual mode (should be False by default)
-        2. awaiting_activation_save=False but no saved position and alarm active
+        1. awaiting_activation_save=False but no saved position and alarm active
            (indicates interrupted save, should re-enable awaiting flag)
-        """
-        # Issue #1: In manual mode, alarm should default to False unless explicitly activated
-        # If we loaded from store and activation_mode is manual, ensure alarm starts as False
-        # (this handles the case where a previous version left alarm_active=True in storage)
-        if str(self.activation_mode) == "manual" and self.alarm_active:
-            # Check if we have a valid saved position - if so, keep alarm active
-            # Otherwise, reset to False (user must manually activate)
-            if self.saved_latitude is None or self.saved_longitude is None:
-                if self.debug_mode:
-                    _LOGGER.debug(
-                        "State validation: resetting alarm_active to False in manual mode (no saved position)"
-                    )
-                self.alarm_active = False
         
-        # Issue #2: Detect interrupted save scenario
+        Note: alarm_active is now always initialized to False at startup for all modes,
+        so we no longer need to validate/reset it here.
+        """
+        # Issue #1: Detect interrupted save scenario
         # If alarm is active but we have no saved position and awaiting flag is False,
         # this indicates the save was interrupted or never completed. Re-enable awaiting.
+        # NOTE: Skip this check for connection mode - it waits for disconnect event, not GPS
         if self.alarm_active and not self._awaiting_activation_save:
             if self.saved_latitude is None or self.saved_longitude is None:
-                if self.debug_mode:
-                    _LOGGER.debug(
-                        "State validation: alarm active but no saved position - enabling awaiting_activation_save"
-                    )
-                self._awaiting_activation_save = True
-                # Set a current activation time so we can detect fresh GPS
-                from datetime import datetime
-                self._activation_time_str = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-                # Notify sensor immediately to show awaiting_position state
-                try:
-                    from homeassistant.helpers.dispatcher import async_dispatcher_send
-                    async_dispatcher_send(self.hass, f"{DOMAIN}_{self.entry_id}_update")
-                except (AttributeError, KeyError, ImportError):
-                    pass
+                if str(self.activation_mode) != "connection":
+                    if self.debug_mode:
+                        _LOGGER.debug(
+                            "State validation: alarm active but no saved position - enabling awaiting_activation_save"
+                        )
+                    self._awaiting_activation_save = True
+                    # Set a current activation time so we can detect fresh GPS
+                    from datetime import datetime
+                    self._activation_time_str = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                    # Notify sensor immediately to show awaiting_position state
+                    try:
+                        from homeassistant.helpers.dispatcher import async_dispatcher_send
+                        async_dispatcher_send(self.hass, f"{DOMAIN}_{self.entry_id}_update")
+                    except (AttributeError, KeyError, ImportError):
+                        pass
 
     async def async_update_options(self, options: dict | None) -> None:
         """Apply runtime options from config entry options dict."""
@@ -413,9 +405,44 @@ class VehicleCoordinator:
             self.last_tag_state = new_tag_state
             await self.async_save()
 
+            # Connection mode: manage alarm based on connection state
+            # disconnect → alarm ON + save position from event
+            # connect → alarm OFF
+            if self.activation_mode == "connection":
+                if new_tag_state == "disconnected":
+                    # Activate alarm and save position from event
+                    previous_alarm = self.alarm_active
+                    self.alarm_active = True
+                    
+                    # Reset awaiting flag and position_notified (like set_alarm_active does)
+                    self._awaiting_activation_save = False
+                    self.position_notified = False
+                    
+                    await self.async_save()
+                    _LOGGER.info("Connection mode: Alarm activated on disconnect (was: %s) (entry_id=%s)", 
+                                previous_alarm, self.entry_id)
+                    
+                    # Save position from event coordinates
+                    from .utils import extract_coords_from_ops_attrs_by_model
+                    lat, lon = extract_coords_from_ops_attrs_by_model(tag_model, last_op, attrs)
+                    if lat is not None and lon is not None:
+                        gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or attrs.get("gpsUtcDt")
+                        locationType = safe_get(last_op, "extra", "locationType") or safe_get(last_op, "locationType") or attrs.get("locationType")
+                        last_seen = attrs.get("last_seen")
+                        await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=locationType, last_seen=last_seen, reason="disconnect")
+                        _LOGGER.info("Connection mode: Position saved on disconnect (entry_id=%s)", self.entry_id)
+                    else:
+                        _LOGGER.warning("Connection mode: Coordinates not available on disconnect (entry_id=%s)", self.entry_id)
+                        
+                elif new_tag_state == "connected":
+                    # Deactivate alarm (like manual stop)
+                    await self.set_alarm_active(False)
+                    _LOGGER.info("Connection mode: Alarm deactivated on connect (entry_id=%s)", self.entry_id)
+
             # if disconnected -> interpret as parked and save position if available
             # decide if disconnect should finalize save (handles combined mode)
-            if should_finalize_combined(self.activation_mode, new_tag_state, self._stationary_counter, self.stationary_count):
+            # NOTE: Connection mode is already handled above via set_alarm_active(), skip here
+            if str(self.activation_mode) != "connection" and should_finalize_combined(self.activation_mode, new_tag_state, self._stationary_counter, self.stationary_count):
                 from .utils import extract_coords_from_ops_attrs_by_model
 
                 lat, lon = extract_coords_from_ops_attrs_by_model(tag_model, last_op, attrs)
@@ -761,9 +788,19 @@ class VehicleCoordinator:
                 self.saved_last_seen = None
 
         self.position_notified = False
+        
+        # Activate alarm when position is saved due to automatic triggers
+        # - "stationary": position/combined mode detected vehicle stationary
+        # - "disconnect": connection/combined mode detected tag disconnect
+        # Do NOT activate for manual "save" or "start" commands
+        previous_alarm = self.alarm_active
+        if reason in ("stationary", "disconnect") and not self.alarm_active:
+            self.alarm_active = True
+            _LOGGER.info("Alarm activated automatically (reason=%s, mode=%s)", reason, self.activation_mode)
+        
         await self.async_save()
-        _LOGGER.info("Saved parking position: %s,%s (reason=%s, gpsUtcDt=%s)", 
-                     self.saved_latitude, self.saved_longitude, reason, self.saved_gpsUtcDt)
+        _LOGGER.info("Saved parking position: %s,%s (reason=%s, gpsUtcDt=%s, alarm_active=%s->%s)", 
+                     self.saved_latitude, self.saved_longitude, reason, self.saved_gpsUtcDt, previous_alarm, self.alarm_active)
         
         # If this is a start-related save, clear the awaiting flag
         if reason == "start":
