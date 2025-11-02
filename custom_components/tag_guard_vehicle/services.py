@@ -205,8 +205,18 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
 
         if a == "save":
             # Save current position from device_tracker
+            # Extract optional parameters
             try:
-                _LOGGER.info("Processing SAVE action - extracting coordinates from device_tracker")
+                require_fresh = data.get("require_fresh_position", True) if isinstance(data, dict) else True
+                notify_waiting = data.get("notify_waiting", False) if isinstance(data, dict) else False
+                
+                # Convert string "true"/"false" to boolean if needed
+                if isinstance(require_fresh, str):
+                    require_fresh = require_fresh.lower() in ("true", "1", "yes")
+                if isinstance(notify_waiting, str):
+                    notify_waiting = notify_waiting.lower() in ("true", "1", "yes")
+                
+                _LOGGER.info("Processing SAVE action - extracting coordinates from device_tracker (require_fresh_position=%s, notify_waiting=%s)", require_fresh, notify_waiting)
                 ok, status, lat, lon, http_status = validate_and_extract_coords(
                     coordinator, hass, device_tracker_entity, {}, allow_payload_coords=False
                 )
@@ -215,9 +225,11 @@ async def handle_webhook_impl(hass: Any, coordinator: Any, device_tracker_entity
                     return web.json_response({"status": status}, status=http_status)
                 lat_f = float(lat)
                 lon_f = float(lon)
-                await coordinator._async_save_position(lat_f, lon_f, reason="save")
-                _LOGGER.info("SAVE action completed - saved position: lat=%s, lon=%s", lat_f, lon_f)
-                return web.json_response({"status": "saved", "latitude": lat_f, "longitude": lon_f}, status=200)
+                
+                # Use new method that checks freshness if required
+                await coordinator._async_save_position_with_freshness_check(lat_f, lon_f, require_fresh_position=require_fresh, notify_waiting=notify_waiting, reason="save")
+                _LOGGER.info("SAVE action completed - lat=%s, lon=%s, require_fresh=%s, notify_waiting=%s", lat_f, lon_f, require_fresh, notify_waiting)
+                return web.json_response({"status": "saved", "latitude": lat_f, "longitude": lon_f, "require_fresh_position": require_fresh, "notify_waiting": notify_waiting}, status=200)
             except Exception:
                 _LOGGER.exception("Failed to save position via webhook action")
                 return web.json_response({"status": "error"}, status=500)
@@ -314,6 +326,18 @@ async def async_register_services(hass, coordinator, device_tracker_entity: str,
     
     async def async_save_position(call=None):
         # save current device_tracker coords for specified or all coordinators
+        # Extract optional parameters (default True for require_fresh, False for notify_waiting)
+        require_fresh = True
+        notify_waiting = False
+        if call and call.data:
+            require_fresh = call.data.get("require_fresh_position", True)
+            notify_waiting = call.data.get("notify_waiting", False)
+            # Convert string to boolean if needed
+            if isinstance(require_fresh, str):
+                require_fresh = require_fresh.lower() in ("true", "1", "yes")
+            if isinstance(notify_waiting, str):
+                notify_waiting = notify_waiting.lower() in ("true", "1", "yes")
+        
         coordinators = _get_coordinators_for_call(hass, call, coordinator, device_tracker_entity, notifier)
         if not coordinators:
             _LOGGER.warning("No coordinators found to execute save_position")
@@ -329,7 +353,9 @@ async def async_register_services(hass, coordinator, device_tracker_entity: str,
             if lat is None or lon is None:
                 _LOGGER.warning("No coordinates available to save for %s", dev_tracker)
                 continue
-            await coord._async_save_position(lat, lon, reason="save")
+            
+            _LOGGER.info("Service save_position called for coordinator %s with require_fresh_position=%s, notify_waiting=%s", _get_entry_id(coord), require_fresh, notify_waiting)
+            await coord._async_save_position_with_freshness_check(lat, lon, require_fresh_position=require_fresh, notify_waiting=notify_waiting, reason="save")
             _LOGGER.info("Saved position for coordinator %s", _get_entry_id(coord))
 
     async def async_reset_flags(call=None):

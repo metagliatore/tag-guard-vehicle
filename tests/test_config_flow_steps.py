@@ -61,7 +61,9 @@ async def test_flow_complete_shows_token_and_creates_entry(monkeypatch):
     # user step -> since activation=connection, it should go to show_token
     res = await flow.async_step_user(user_input)
     assert res["type"] == "form" and res["step_id"] == "show_token"
-    # confirm (simulate user confirming token form)
-    res2 = await flow.async_step_show_token({"webhook_token_display": "fixed-token"})
+    
+    # show_token step has no input fields - just description and Submit button
+    # User confirms by passing empty dict (no fields to fill)
+    res2 = await flow.async_step_show_token({})
     assert res2["type"] == "create_entry"
     assert res2["options"]["webhook_token"] == "fixed-token"

@@ -114,6 +114,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 pass
             
             notify_services_text = ", ".join(notify_services) if notify_services else "No notify services found"
+            
             # build translated placeholders (awaited)
             activation_help = await translate(
                 self.hass,
@@ -122,45 +123,45 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             placeholders = {
                 "activation_help": activation_help,
+                "tag_model_help": await translate(
+                    self.hass,
+                    "messages.tag_model_help",
+                    "🏷️ SELECT YOUR TAG MODEL FIRST — This determines which device_tracker entities will be shown in the next field. Different tags report GPS coordinates differently.",
+                ),
                 "device_tracker_help": await translate(
                     self.hass,
                     "messages.device_tracker_help",
-                    "Select the device_tracker used to detect the vehicle's location (example: device_tracker.my_phone).",
+                    "📍 Select the device_tracker for your Bluetooth tag (filtered based on your tag model). Example: device_tracker.smarttag_scooter",
                 ),
                 "person_help": await translate(
                     self.hass,
                     "messages.person_help",
-                    "Person associated with the vehicle (used for notifications), e.g. person.john.",
+                    "👤 Person associated with the vehicle (used for notifications and presence detection), e.g. person.john.",
                 ),
                 "notifier_help": await translate(
                     self.hass,
                     "messages.notifier_help",
-                    f"Enter the notify service name (e.g., 'demo_user', 'telegram'). Available: {notify_services_text}",
+                    f"🔔 Notification service to receive alerts. Available services: {notify_services_text}",
                 ),
                 "tolerance_help": await translate(
                     self.hass,
                     "messages.tolerance_help",
-                    "Tolerance radius in meters used to detect movement vs. small GPS variation (example: 200).",
+                    "📏 GPS tolerance radius: small GPS fluctuations within this radius are ignored (prevents false movement alerts).",
                 ),
                 "activation_mode_help": await translate(
                     self.hass,
                     "messages.activation_mode_help",
-                    "Choose activation mode: 'connection' (save on disconnect), 'position' (save after stable location), 'combined' (both), 'manual' (manual saves).",
-                ),
-                "tag_model_help": await translate(
-                    self.hass,
-                    "messages.tag_model_help",
-                    "Bluetooth tag model – some models report coordinates differently (e.g. Samsung SmartTag, Tile).",
+                    "⚙️ Activation mode: 'connection' (auto-save on Bluetooth disconnect), 'position' (auto-save when stationary), 'combined' (both triggers), 'manual' (you control via buttons).",
                 ),
                 "webhook_help": await translate(
                     self.hass,
                     "messages.webhook_help",
-                    "Optional: enter a custom webhook token (e.g. my-token-123), or leave empty to have one generated.",
+                    "🔗 Optional: custom webhook token for advanced users (leave empty for auto-generated secure token).",
                 ),
                 "debug_help": await translate(
                     self.hass,
                     "messages.debug_help",
-                    "Enable verbose debug logs (useful for troubleshooting; enable only when diagnosing issues).",
+                    "🐛 Enable debug logging for troubleshooting (generates detailed logs — disable after diagnosis).",
                 ),
             }
 
@@ -208,13 +209,26 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user",
                 data_schema=vol.Schema(
                 {
+                    # 1. Tag Model - FIRST FIELD (primary selection)
+                    vol.Required("tag_model", default=stub_data.get("tag_model", "samsung_smarttag2")): SelectSelector(
+                        SelectSelectorConfig(
+                            options=list(TAG_MODELS.keys()),
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    
+                    # 2. Device Tracker - SECOND FIELD (all device_trackers available)
                     # EntitySelector doesn't support string defaults, only use default if value exists
                     vol.Required(CONF_DEVICE_TRACKER, default=stub_data.get(CONF_DEVICE_TRACKER) or vol.UNDEFINED): EntitySelector(
                         EntitySelectorConfig(domain="device_tracker")
                     ),
+                    
+                    # 3. Person Entity
                     vol.Required(CONF_PERSON_ENTITY, default=stub_data.get(CONF_PERSON_ENTITY) or vol.UNDEFINED): EntitySelector(
                         EntitySelectorConfig(domain="person")
                     ),
+                    
+                    # 4. Notifier Service
                     # Use SelectSelector if services found, otherwise TextSelector
                     vol.Required(CONF_NOTIFIER, default=stub_data.get(CONF_NOTIFIER, "demo_user" if not notify_services else notify_services[0].replace("notify.", ""))): 
                         SelectSelector(SelectSelectorConfig(
@@ -224,28 +238,36 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         )) if notify_services else TextSelector(TextSelectorConfig(
                             type=TextSelectorType.TEXT,
                         )),
+                    
+                    # 5. Tolerance Radius
                     vol.Required(CONF_TOLERANCE_RADIUS, default=stub_data.get(CONF_TOLERANCE_RADIUS, 200)): NumberSelector(
                         NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")
                     ),
+                    
+                    # 6. Activation Mode
                     vol.Required(CONF_ACTIVATION_MODE, default=stub_data.get(CONF_ACTIVATION_MODE, "manual")): SelectSelector(
                         SelectSelectorConfig(
                             options=["manual", "connection", "position", "combined"],
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Required("tag_model", default=stub_data.get("tag_model", "samsung_smarttag2")): SelectSelector(
-                        SelectSelectorConfig(
-                            options=list(TAG_MODELS.keys()),
-                            mode=SelectSelectorMode.DROPDOWN,
+                    
+                    # 7. Webhook Token (Optional) - Password field with show/hide toggle
+                    vol.Optional("webhook_token", default=stub_data.get("webhook_token", "")): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.PASSWORD,
                         )
                     ),
-                    vol.Optional("webhook_token", default=stub_data.get("webhook_token", "")): str,
+                    
+                    # 8. Debug Mode
                     vol.Required("debug_mode", default=stub_data.get("debug_mode", False)): BooleanSelector(BooleanSelectorConfig()),
                 }
             ),
                 errors=errors,
                 description_placeholders=placeholders,
             )
+
+        # If we reach here user_input was provided and handled above.
 
     async def async_step_stationary(self, user_input=None):
         """Collect stationary-related parameters (only for position/combined).
@@ -295,8 +317,12 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_STATIONARY_COUNT, default=3): NumberSelector(
                         NumberSelectorConfig(min=1, max=20, step=1, mode=NumberSelectorMode.SLIDER)
                     ),
-                    # optional manual token entry (rare), user can paste their own
-                    vol.Optional("webhook_token", default=""): str,
+                    # optional manual token entry (rare), user can paste their own - Password field with show/hide toggle
+                    vol.Optional("webhook_token", default=""): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.PASSWORD,
+                        )
+                    ),
                 }
             ),
                 description_placeholders=placeholders,
@@ -327,12 +353,37 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception:
             # best-effort: if we can't compute it, fall back to token only
             webhook_url = token
+        
         if user_input is not None:
-            # user confirmed; create the entry
-            return self.async_create_entry(title="Tag Guard Vehicle", data=data, options=options)
+            # user confirmed by clicking Submit (no fields to validate)
+            # The actual webhook token is already in options from previous steps
+            
+            # Include device_tracker in title for easier identification in UI
+            device_tracker = data.get("device_tracker", "")
+            if device_tracker:
+                # Extract just the name part (e.g., "smarttagscooter" from "device_tracker.smarttagscooter")
+                tracker_name = device_tracker.replace("device_tracker.", "").replace("_", " ").title()
+                title = f"Tag Guard Vehicle ({tracker_name})"
+            else:
+                title = "Tag Guard Vehicle"
+            return self.async_create_entry(title=title, data=data, options=options)
 
-        # present a simple form with the token filled so user can copy it
+        # Build description with webhook information
+        # Show everything in description - no editable fields needed
+        device_tracker_name = data.get("device_tracker", "your_device")
+        
+        # Build placeholders for the description
+        # The description_placeholders are used to replace {key} in translation strings
+        placeholders = {
+            "webhook_url": webhook_url,
+            "webhook_token": token,
+            "device_tracker": device_tracker_name,
+        }
+
+        # Show form with NO input fields - just description and Submit button
+        # The description will use placeholders from description_placeholders
         return self.async_show_form(
             step_id="show_token",
-            data_schema=vol.Schema({vol.Required("webhook_token_display", default=webhook_url): str}),
+            data_schema=vol.Schema({}),  # Empty schema = no input fields
+            description_placeholders=placeholders,
         )

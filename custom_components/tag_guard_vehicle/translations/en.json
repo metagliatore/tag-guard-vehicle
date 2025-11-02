@@ -1,7 +1,13 @@
 {
   "config": {
+    "step": {
+      "show_token": {
+        "description": "🔗 **Your webhook is ready!**\n\nCopy the URL below and configure it in your automation app.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 **Full Webhook URL:**\n`{webhook_url}`\n\n🔑 **Token only:** `{webhook_token}`\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nThis URL allows your Bluetooth tag to control this integration.\n\n**Click 'Submit' to complete the setup.**"
+      }
+    },
     "error": {
-      "webhook_token_in_use": "This webhook token is already in use by another instance. Please use a different token."
+      "webhook_token_in_use": "This webhook token is already in use by another instance. Please use a different token.",
+      "webhook_url_readonly": "The webhook URL is read-only and cannot be modified. Please click Submit to continue."
     }
   },
   "entity": {

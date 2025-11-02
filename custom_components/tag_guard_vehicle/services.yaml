@@ -1,6 +1,6 @@
 save_position:
   name: Save Position
-  description: Force-save the current device_tracker position.
+  description: Force-save the current device_tracker position. By default requires a fresh GPS position (newer than current time). If position is not fresh, starts monitoring until a fresh position is available.
   fields:
     config_entry:
       name: Configuration Entry
@@ -9,6 +9,20 @@ save_position:
       example: "01234567890abcdef"
       selector:
         text:
+    require_fresh_position:
+      name: Require Fresh Position
+      description: If true (default), only save if GPS timestamp is fresh. If false, save immediately regardless of timestamp.
+      required: false
+      default: true
+      selector:
+        boolean:
+    notify_waiting:
+      name: Notify when waiting for GPS
+      description: If true, send notification when waiting for a fresh GPS position. Default is false.
+      required: false
+      default: false
+      selector:
+        boolean:
 
 manual_trigger:
   name: Manual Trigger

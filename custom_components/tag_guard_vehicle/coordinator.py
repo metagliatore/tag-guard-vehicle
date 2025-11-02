@@ -511,7 +511,9 @@ class VehicleCoordinator:
                     if act_time and gpsUtcDt and str(gpsUtcDt).isdigit() and int(str(gpsUtcDt)) > int(str(act_time)):
                         # coordinates should already be present in latitude/longitude (above block)
                         if latitude is not None and longitude is not None:
-                            await self._async_save_position(latitude, longitude, gpsUtcDt=gpsUtcDt, locationType=None, last_seen=attrs.get("last_seen"), reason="start")
+                            # Determine reason: use "save" if not alarm_active, "start" if alarm is active
+                            save_reason = "start" if self.alarm_active else "save"
+                            await self._async_save_position(latitude, longitude, gpsUtcDt=gpsUtcDt, locationType=None, last_seen=attrs.get("last_seen"), reason=save_reason)
                             self._awaiting_activation_save = False
                             if self.debug_mode:
                                 _LOGGER.debug(
@@ -624,8 +626,7 @@ class VehicleCoordinator:
                             self._activation_time_str = act_ts
                             _LOGGER.info("Awaiting fresh GPS after activation: activation_time=%s device=%s gpsUtcDt=%s (entry_id=%s)", 
                                         act_ts, device_entity, gpsUtcDt, self.entry_id)
-                        else:
-                            _LOGGER.info("Position saved on activation (entry_id=%s)", self.entry_id)
+                            
                             # Notify sensor immediately to show awaiting_position state
                             try:
                                 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -648,6 +649,8 @@ class VehicleCoordinator:
                                     )
                                 except Exception:
                                     _LOGGER.exception("Failed to send waiting notification")
+                        else:
+                            _LOGGER.info("Position saved on activation (entry_id=%s)", self.entry_id)
                     except Exception:
                         # suppress any exceptions from this best-effort save
                         _LOGGER.exception("Error while attempting save-on-activation (entry_id=%s)", self.entry_id)
@@ -832,6 +835,116 @@ class VehicleCoordinator:
             return False
         dist = haversine_distance(self.saved_latitude, self.saved_longitude, lat, lon)
         return dist > float(tolerance_m)
+
+    async def _async_save_position_with_freshness_check(
+        self,
+        lat: float,
+        lon: float,
+        require_fresh_position: bool = True,
+        notify_waiting: bool = False,
+        reason: str = "save"
+    ):
+        """Save position with optional freshness check.
+        
+        Args:
+            lat: Latitude to save
+            lon: Longitude to save
+            require_fresh_position: If True, only save if GPS timestamp is fresh.
+                                   If position is not fresh, start monitoring for fresh position.
+            notify_waiting: If True and position is not fresh, send notification to user about waiting state.
+            reason: Reason for save (affects notification message)
+        
+        Behavior when require_fresh_position=True:
+        - If GPS timestamp is fresh (newer than current time): save immediately
+        - If GPS timestamp is stale: start monitoring for fresh position (like 'start' but without alarm)
+          - If notify_waiting=True: send notification "⏳ Waiting for fresh GPS..."
+        
+        Behavior when require_fresh_position=False:
+        - Save immediately regardless of timestamp (legacy behavior)
+        """
+        if not require_fresh_position:
+            # Legacy behavior: save immediately without checking freshness
+            await self._async_save_position(lat, lon, reason=reason)
+            return
+        
+        # require_fresh_position=True: check if position is fresh
+        from datetime import datetime
+        
+        # Get current time as activation threshold
+        current_time_str = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        
+        # Try to get GPS timestamp from device_tracker
+        device_entity = self.config.get("device_tracker")
+        if not device_entity:
+            _LOGGER.warning("No device_tracker configured, cannot check position freshness")
+            return
+        
+        state = self.hass.states.get(device_entity)
+        if not state:
+            _LOGGER.warning("Device tracker %s not found", device_entity)
+            return
+        
+        # Extract gpsUtcDt from ops attributes
+        try:
+            from .utils import extract_coords_from_ops_attrs_by_model, safe_get
+            
+            ops = state.attributes.get("ops") or []
+            last_op = ops[0] if isinstance(ops, (list, tuple)) and len(ops) > 0 else {}
+            gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or state.attributes.get("gpsUtcDt")
+            
+            # Check if GPS timestamp is fresh (numeric YYYYMMDDHHMMSS format)
+            is_fresh = False
+            if gpsUtcDt and str(gpsUtcDt).isdigit():
+                try:
+                    if int(str(gpsUtcDt)) > int(current_time_str):
+                        is_fresh = True
+                        _LOGGER.debug("Position is fresh: gpsUtcDt=%s > current_time=%s", gpsUtcDt, current_time_str)
+                except Exception:
+                    pass
+            
+            if is_fresh:
+                # Position is fresh: save immediately with full metadata
+                locationType = safe_get(last_op, "extra", "locationType") or safe_get(last_op, "locationType")
+                last_seen = state.attributes.get("last_seen")
+                await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=locationType, last_seen=last_seen, reason=reason)
+            else:
+                # Position is NOT fresh: start monitoring for fresh position
+                _LOGGER.info("Position is not fresh (gpsUtcDt=%s), starting monitoring for fresh GPS (notify_waiting=%s)", gpsUtcDt, notify_waiting)
+                
+                # Reset any previous awaiting state (like start does)
+                # This ensures a new save request overrides any pending save
+                if self._awaiting_activation_save:
+                    _LOGGER.debug("Resetting previous awaiting save state")
+                
+                # Set flag to await fresh position (like start, but without activating alarm)
+                self._awaiting_activation_save = True
+                self._activation_time_str = current_time_str
+                
+                # Notify sensor to update UI state
+                try:
+                    from homeassistant.helpers.dispatcher import async_dispatcher_send
+                    async_dispatcher_send(self.hass, f"{DOMAIN}_{self.entry_id}_update")
+                except (AttributeError, KeyError, ImportError):
+                    pass
+                
+                # Send notification to user about waiting state (only if notify_waiting=True)
+                if notify_waiting and self.notifier:
+                    try:
+                        from .utils import translate
+                        title = await translate(self.hass, "messages.save_awaiting_title", "⏳ Waiting for fresh GPS...")
+                        message = await translate(self.hass, "messages.save_awaiting_message", "Monitoring for fresh GPS position to save parking location.")
+                        await self.hass.services.async_call(
+                            "notify",
+                            self.notifier.replace("notify.", ""),
+                            {"title": title, "message": message},
+                        )
+                    except Exception:
+                        _LOGGER.exception("Failed to send waiting notification")
+        
+        except Exception:
+            _LOGGER.exception("Error checking position freshness")
+            # On error, fall back to saving anyway
+            await self._async_save_position(lat, lon, reason=reason)
 
     async def _stationary_check(self, lat: float, lon: float) -> None:
         """Called after stationary_minutes to verify position remained the same and save it."""

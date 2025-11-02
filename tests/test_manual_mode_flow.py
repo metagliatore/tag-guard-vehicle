@@ -172,6 +172,10 @@ def test_webhook_save_stores_position():
             self.saved_latitude = lat
             self.saved_longitude = lon
         
+        async def _async_save_position_with_freshness_check(self, lat, lon, require_fresh_position=True, notify_waiting=False, reason="save"):
+            # For tests, just save immediately (ignore freshness check)
+            await self._async_save_position(lat, lon, reason=reason)
+        
         async def async_save(self):
             pass
     

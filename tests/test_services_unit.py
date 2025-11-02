@@ -47,6 +47,10 @@ class FakeCoordinator:
     async def _async_save_position(self, lat, lon, gpsUtcDt=None, locationType=None, last_seen=None, reason="save"):
         self.saved = (lat, lon)
 
+    async def _async_save_position_with_freshness_check(self, lat, lon, require_fresh_position=True, notify_waiting=False, reason="save"):
+        # For tests, just save immediately (ignore freshness check)
+        await self._async_save_position(lat, lon, reason=reason)
+
 
 class FakeRequest:
     def __init__(self, payload=None, headers=None, query=None):

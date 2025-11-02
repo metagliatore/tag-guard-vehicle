@@ -1,7 +1,13 @@
 {
   "config": {
+    "step": {
+      "show_token": {
+        "description": "🔗 **Il tuo webhook è pronto!**\n\nCopia l'URL qui sotto e configuralo nella tua app di automazione.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 **URL Webhook completo:**\n`{webhook_url}`\n\n🔑 **Solo token:** `{webhook_token}`\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nQuesto URL permette al tuo tag Bluetooth di controllare questa integrazione.\n\n**Clicca 'Invia' per completare la configurazione.**"
+      }
+    },
     "error": {
-      "webhook_token_in_use": "Questo token webhook è già in uso da un'altra istanza. Utilizzare un token diverso."
+      "webhook_token_in_use": "Questo token webhook è già in uso da un'altra istanza. Utilizzare un token diverso.",
+      "webhook_url_readonly": "L'URL del webhook è di sola lettura e non può essere modificato. Premere Invia per continuare."
     }
   },
   "entity": {
