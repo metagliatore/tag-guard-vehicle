@@ -30,26 +30,31 @@ async def test_webhook_routing_multiple_connection_mode_instances():
         class States:
             def get(self, entity_id):
                 # Return different coordinates based on entity_id
+                # Use future GPS timestamp to ensure freshness check passes
+                from datetime import datetime, timedelta
+                future_time = datetime.now() + timedelta(hours=1)
+                gps_timestamp = future_time.strftime("%Y%m%d%H%M%S")
+                
                 class FakeState:
-                    def __init__(self, lat, lon):
+                    def __init__(self, lat, lon, gps_ts):
                         self.attributes = {
                             "ops": [
                                 {
                                     "oprnType": "LOCATION",
                                     "latitude": str(lat),
                                     "longitude": str(lon),
-                                    "extra": {"gpsUtcDt": "20251102190000"},
+                                    "extra": {"gpsUtcDt": gps_ts},
                                 }
                             ],
                             "latitude": lat,
                             "longitude": lon,
-                            "gpsUtcDt": "20251102190000",
+                            "gpsUtcDt": gps_ts,
                         }
-
+                
                 if entity_id == "device.tracker_car":
-                    return FakeState(45.1, 9.1)
+                    return FakeState(45.1, 9.1, gps_timestamp)
                 elif entity_id == "device.tracker_motorcycle":
-                    return FakeState(45.2, 9.2)
+                    return FakeState(45.2, 9.2, gps_timestamp)
                 return None
 
         services = Services()
@@ -63,14 +68,17 @@ async def test_webhook_routing_multiple_connection_mode_instances():
             pass
 
     class FakeRequest:
-        def __init__(self, action):
+        def __init__(self, action, **kwargs):
             self.method = "POST"
             self.query = {}
             self.headers = {}
             self._action = action
+            self._kwargs = kwargs
 
         async def json(self):
-            return {"action": self._action}
+            data = {"action": self._action}
+            data.update(self._kwargs)
+            return data
 
     hass = FakeHass()
 
@@ -93,8 +101,8 @@ async def test_webhook_routing_multiple_connection_mode_instances():
     coord_motorcycle.store = FakeStore()
     coord_motorcycle.alarm_active = False
 
-    # Send START command to car webhook
-    request_car_start = FakeRequest("start")
+    # Send START command to car webhook (skip GPS freshness check for this test)
+    request_car_start = FakeRequest("start", require_fresh_position=False)
     response_car = await handle_webhook_impl(
         hass, coord_car, "device.tracker_car", request_car_start
     )
@@ -106,8 +114,8 @@ async def test_webhook_routing_multiple_connection_mode_instances():
     assert coord_motorcycle.alarm_active is False, "Motorcycle should be unchanged"
     assert coord_motorcycle.saved_latitude is None
 
-    # Send START command to motorcycle webhook
-    request_motorcycle_start = FakeRequest("start")
+    # Send START command to motorcycle webhook (skip GPS freshness check for this test)
+    request_motorcycle_start = FakeRequest("start", require_fresh_position=False)
     response_motorcycle = await handle_webhook_impl(
         hass, coord_motorcycle, "device.tracker_motorcycle", request_motorcycle_start
     )

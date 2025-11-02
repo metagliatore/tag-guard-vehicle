@@ -815,8 +815,9 @@ class VehicleCoordinator:
             pass
         
         # Send notification based on reason
-        # Only send for "save" and "start" - NOT for disconnect/stationary (those are automatic)
-        if self.notifier and reason in ("save", "start"):
+        # Send for "save", "start", and "disconnect" (connection mode auto-activation)
+        # Do NOT send for "stationary" (would be too noisy)
+        if self.notifier and reason in ("save", "start", "disconnect"):
             try:
                 from .utils import translate
                 
@@ -827,15 +828,34 @@ class VehicleCoordinator:
                 vehicle_name = self.get_vehicle_name()
                 
                 # Build message based on reason using translations
-                if reason == "start":
+                if reason in ("start", "disconnect"):
+                    # Both start and disconnect activate monitoring
                     title = await translate(self.hass, "messages.monitoring_activated_title", "🟢 Monitoring activated")
                     title = f"{title} [{vehicle_name}]"
-                    message_template = await translate(
-                        self.hass, 
-                        "messages.monitoring_activated_message", 
-                        "Alarm active. Monitoring current position.\n📍 {map_url}"
-                    )
-                    message = message_template.format(map_url=map_url)
+                    
+                    # Get mode name for display
+                    mode_names = {
+                        "manual": "Manual",
+                        "position": "Position",
+                        "combined": "Combined",
+                        "connection": "Connection"
+                    }
+                    mode_display = mode_names.get(self.activation_mode, self.activation_mode.capitalize())
+                    
+                    # Different message for disconnect vs manual start
+                    if reason == "disconnect":
+                        message_template = await translate(
+                            self.hass, 
+                            "messages.connection_mode_disconnect", 
+                            "Tag disconnected. Alarm activated.\nMode: {mode}\n📍 {map_url}"
+                        )
+                    else:
+                        message_template = await translate(
+                            self.hass, 
+                            "messages.monitoring_activated_message", 
+                            "Alarm active. Monitoring current position.\nMode: {mode}\n📍 {map_url}"
+                        )
+                    message = message_template.format(mode=mode_display, map_url=map_url)
                 else:  # reason == "save"
                     title = await translate(self.hass, "messages.position_saved_title", "📍 Position saved")
                     title = f"{title} [{vehicle_name}]"
