@@ -148,8 +148,7 @@ class TagGuardVehicleSensor(SensorEntity):
                      id(coordinator))
 
         # build attributes
-        # expose core persisted state + runtime hints so a Lovelace card can
-        # display finer-grained status (parked, awaiting_position, alarm_triggered)
+        # expose core persisted state + runtime hints for automations and UI
         self._attrs = {
             "saved_latitude": coordinator.saved_latitude,
             "saved_longitude": coordinator.saved_longitude,

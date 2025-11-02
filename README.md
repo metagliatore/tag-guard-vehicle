@@ -286,56 +286,6 @@ automation:
           message: "✅ Vehicle position saved with fresh GPS data!"
 ```
 
-## Lovelace Card
-
-Simple status card:
-```yaml
-type: entities
-entities:
-  - entity: sensor.tag_guard_vehicle
-    name: Vehicle Status
-  - type: attribute
-    entity: sensor.tag_guard_vehicle
-    attribute: alarm_active
-    name: Alarm
-  - type: attribute
-    entity: sensor.tag_guard_vehicle
-    attribute: saved_position
-    name: Parking Location
-```
-
-With control buttons:
-```yaml
-type: vertical-stack
-cards:
-  - type: entities
-    entities:
-      - entity: sensor.tag_guard_vehicle
-  
-  - type: horizontal-stack
-    cards:
-      - type: button
-        name: Start
-        icon: mdi:shield-check
-        tap_action:
-          action: call-service
-          service: tag_guard_vehicle.start
-      
-      - type: button
-        name: Stop
-        icon: mdi:shield-off
-        tap_action:
-          action: call-service
-          service: tag_guard_vehicle.stop
-      
-      - type: button
-        name: Save Position
-        icon: mdi:map-marker
-        tap_action:
-          action: call-service
-          service: tag_guard_vehicle.save_position
-```
-
 ## Troubleshooting
 
 ### No notifications received
