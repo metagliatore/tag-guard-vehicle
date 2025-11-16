@@ -138,7 +138,9 @@ async def test_combined_requires_stationary_then_disconnect(monkeypatch):
     # patch async_call_later to call the callback immediately
     def fake_call_later(hass_arg, seconds, callback):
         # simulate immediate timer firing by invoking the callback directly
-        callback(None)
+        # callback is now async, so we need to schedule it
+        import asyncio
+        asyncio.create_task(callback(None))
         return lambda: None
 
     monkeypatch.setattr("custom_components.tag_guard_vehicle.coordinator.async_call_later", fake_call_later)

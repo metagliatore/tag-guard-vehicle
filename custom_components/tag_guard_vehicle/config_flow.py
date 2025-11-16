@@ -276,21 +276,13 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         reports (count) that must be observed in the same area before
         activating the guard mode.
         """
-        errors = {}
         if user_input is not None:
-            # Check if custom webhook_token is provided and if it's already in use
-            custom_token = user_input.get("webhook_token", "").strip()
-            if custom_token and is_webhook_token_in_use(self.hass, custom_token):
-                errors["webhook_token"] = "webhook_token_in_use"
-                _LOGGER.warning("Webhook token already in use: %s", custom_token)
-            
-            if not errors:
-                # merge with stored user_data and generate webhook token if missing
-                base = getattr(self, "_user_data", {})
-                data, options = build_create_payload(user_input, base=base)
-                # stash and show token before finalizing
-                self._create_payload = (data, options)
-                return await self.async_step_show_token()
+            # merge with stored user_data and generate webhook token
+            base = getattr(self, "_user_data", {})
+            data, options = build_create_payload(user_input, base=base)
+            # stash and show token before finalizing
+            self._create_payload = (data, options)
+            return await self.async_step_show_token()
 
         # show stationary form
         if user_input is None:
@@ -298,12 +290,10 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "stationary_help": await translate(
                     self.hass,
                     "messages.stationary_help",
-                        "Stationary checks — how long (minutes) and how many samples must be observed in the same area before saving (e.g. 10 minutes and 3 samples).",
-                ),
-                "webhook_help": await translate(
-                    self.hass,
-                    "messages.webhook_help",
-                        "Optional: enter a custom webhook token (e.g. my-token-123), or leave empty to have one generated.",
+                        "Position mode activates when vehicle remains stationary for the configured time. "
+                        "Time: how many minutes the position must remain stable. "
+                        "Count: how many GPS samples must be received (0 = bypass counter check, use time only). "
+                        "Example: 10 minutes + 3 samples = activate after 10 minutes with at least 3 stable GPS readings.",
                 ),
             }
 
@@ -315,13 +305,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="min")
                     ),
                     vol.Required(CONF_STATIONARY_COUNT, default=3): NumberSelector(
-                        NumberSelectorConfig(min=1, max=20, step=1, mode=NumberSelectorMode.SLIDER)
-                    ),
-                    # optional manual token entry (rare), user can paste their own - Password field with show/hide toggle
-                    vol.Optional("webhook_token", default=""): TextSelector(
-                        TextSelectorConfig(
-                            type=TextSelectorType.PASSWORD,
-                        )
+                        NumberSelectorConfig(min=0, max=20, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="samples")
                     ),
                 }
             ),

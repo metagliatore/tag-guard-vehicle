@@ -60,12 +60,20 @@ class VehicleCoordinator:
         self.last_tag_state: str | None = None
 
         # runtime / config (apply defaults if missing)
-        self.notifier = config.get(CONF_NOTIFIER)
-        self.person_entity = config.get(CONF_PERSON_ENTITY)
-        self.activation_mode = config.get(CONF_ACTIVATION_MODE)
-        self.tolerance_radius = float(config.get(CONF_TOLERANCE_RADIUS, 200))
-        self.stationary_minutes = int(config.get(CONF_STATIONARY_MINUTES, 10))
-        self.stationary_count = int(config.get(CONF_STATIONARY_COUNT, 3))
+        # Read from options if available, otherwise from config (for backwards compatibility)
+        options = config.get("options", {})
+        self.notifier = options.get(CONF_NOTIFIER) or config.get(CONF_NOTIFIER)
+        self.person_entity = options.get(CONF_PERSON_ENTITY) or config.get(CONF_PERSON_ENTITY)
+        self.activation_mode = options.get(CONF_ACTIVATION_MODE) or config.get(CONF_ACTIVATION_MODE)
+        self.tolerance_radius = float(options.get(CONF_TOLERANCE_RADIUS) or config.get(CONF_TOLERANCE_RADIUS, 200))
+        self.stationary_minutes = int(options.get(CONF_STATIONARY_MINUTES) or config.get(CONF_STATIONARY_MINUTES, 10))
+        # stationary_count can be 0, so we use 'in' check instead of 'or' to preserve 0 values
+        if CONF_STATIONARY_COUNT in options:
+            self.stationary_count = int(options[CONF_STATIONARY_COUNT])
+        elif CONF_STATIONARY_COUNT in config:
+            self.stationary_count = int(config[CONF_STATIONARY_COUNT])
+        else:
+            self.stationary_count = 3
         # All activation modes start with alarm OFF
         # - Manual: user activates explicitly
         # - Connection: alarm activates automatically on disconnect event
@@ -363,12 +371,58 @@ class VehicleCoordinator:
 
     async def _handle_device_event(self, event):
         # event.data contains entity_id, old_state, new_state
+        _LOGGER.info("=== _handle_device_event CALLED ===")
+        
         new_state = event.data.get("new_state")
         old_state = event.data.get("old_state")
         entity_id = event.data.get("entity_id")
 
+        _LOGGER.info("Event data: entity_id=%s, new_state=%s, activation_mode=%s", entity_id, new_state is not None, self.activation_mode)
+
         if new_state is None:
+            _LOGGER.info("new_state is None, RETURNING EARLY")
             return
+        
+        # Early return optimization: skip processing if nothing relevant changed
+        # This avoids unnecessary processing on every device_tracker poll (~30 seconds)
+        if old_state is not None:
+            old_attrs = old_state.attributes
+            new_attrs = new_state.attributes
+            
+            # Extract key attributes that matter for our logic
+            old_ops = old_attrs.get("ops", [])
+            new_ops = new_attrs.get("ops", [])
+            
+            # For position mode: check if GPS timestamp changed (primary optimization)
+            if self.activation_mode in ("position", "combined") and not self.alarm_active:
+                from .utils import safe_get
+                old_gps_ts = None
+                new_gps_ts = None
+                
+                if isinstance(old_ops, list) and len(old_ops) > 0:
+                    old_gps_ts = safe_get(old_ops[0], "extra", "gpsUtcDt") or safe_get(old_ops[0], "gpsUtcDt")
+                
+                if isinstance(new_ops, list) and len(new_ops) > 0:
+                    new_gps_ts = safe_get(new_ops[0], "extra", "gpsUtcDt") or safe_get(new_ops[0], "gpsUtcDt")
+                
+                # If GPS timestamp hasn't changed, skip processing
+                # BUT: Always process if we don't have a timer running yet (need to start monitoring)
+                if old_gps_ts and new_gps_ts and old_gps_ts == new_gps_ts:
+                    # Only skip if we already have a candidate (timer is running)
+                    if self._stationary_candidate is not None:
+                        _LOGGER.debug("Skipping event: GPS timestamp unchanged (%s), timer already running", old_gps_ts)
+                        return
+                    else:
+                        _LOGGER.debug("Processing event despite unchanged GPS timestamp: need to start monitoring (no timer yet)")
+            
+            # For connection mode or when alarm is active: check if connection state changed
+            # (We'll let the connection logic handle this, but we can do a quick check here)
+            # Note: We still process if coordinates changed significantly (for movement detection when alarm active)
+        
+        _LOGGER.info("new_state OK, processing event...")
+
+        # Import utility functions at the start
+        from .utils import safe_get
 
         attrs = new_state.attributes
 
@@ -465,6 +519,20 @@ class VehicleCoordinator:
         from .utils import extract_coords_from_ops_attrs_by_model
 
         latitude, longitude = extract_coords_from_ops_attrs_by_model(self.config.get("tag_model"), last_op, attrs)
+        
+        _LOGGER.info(
+            "GPS extraction: from_ops=(%s, %s), activation_mode=%s",
+            latitude, longitude, self.activation_mode
+        )
+        
+        # For position mode, if no coords from ops, try device_tracker attributes directly
+        if (latitude is None or longitude is None) and self.activation_mode in ("position", "combined"):
+            latitude = attrs.get("latitude")
+            longitude = attrs.get("longitude")
+            _LOGGER.info(
+                "GPS fallback to device_tracker attrs: lat=%s, lon=%s",
+                latitude, longitude
+            )
 
         if latitude is not None and longitude is not None:
             try:
@@ -477,6 +545,8 @@ class VehicleCoordinator:
             if lat_f is not None and lon_f is not None:
                 # if we have saved position and alarm is active, check movement
                 if self.saved_latitude is not None and self.alarm_active:
+                    _LOGGER.info("Alarm ACTIVE: monitoring movement from saved position (%.7f, %.7f)", 
+                                self.saved_latitude, self.saved_longitude)
                     if self.has_moved(lat_f, lon_f, self.tolerance_radius):
                         # avoid duplicate notifications
                         if not self.position_notified:
@@ -485,37 +555,211 @@ class VehicleCoordinator:
                             self.position_notified = True
                             await self.async_save()
 
-                # stationary detection and count handling: only for position/combined modes
-                if self.activation_mode in ("position", "combined"):
-                    # update stationary candidate and counter using helper
-                    candidate, counter = update_stationary_counter(
-                        self._stationary_candidate, self._stationary_counter, (lat_f, lon_f), self.tolerance_radius
+                # Stationary detection for position/combined modes
+                # Note: This logic is triggered by device_tracker state changes (GPS updates from SmartThings polling),
+                # NOT by webhook events. Webhooks only send commands (start/stop/save), not GPS coordinates.
+                # Skip stationary detection when alarm is already active - just monitor for movement
+                if self.activation_mode in ("position", "combined") and not self.alarm_active:
+                    # Extract GPS timestamp to check if this is a new update
+                    current_gps_timestamp = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt")
+                    last_processed_timestamp = getattr(self, "_last_processed_gps_timestamp", None)
+                    
+                    # Skip processing if GPS timestamp hasn't changed (avoid processing duplicate updates)
+                    if current_gps_timestamp and last_processed_timestamp and current_gps_timestamp == last_processed_timestamp:
+                        _LOGGER.debug(
+                            "Skipping position mode processing: GPS timestamp unchanged (%s)", 
+                            current_gps_timestamp
+                        )
+                        return
+                    
+                    # Save this timestamp as processed
+                    self._last_processed_gps_timestamp = current_gps_timestamp
+                    
+                    _LOGGER.info(
+                        "Position mode ACTIVE: GPS (%.7f, %.7f), counter=%d, mode=%s, debug=%s",
+                        lat_f, lon_f, self._stationary_counter, self.activation_mode, self.debug_mode
                     )
+                    
+                    # Check if we need fresh GPS timestamps (stationary_count > 0)
+                    should_check_timestamp = int(getattr(self, "stationary_count", 0)) > 0
+                    gps_is_fresh = True  # Default: assume fresh
+                    is_baseline_gps = False  # Flag to indicate this is the first GPS (baseline)
+                    
+                    if should_check_timestamp:
+                        # Extract GPS timestamp from current update
+                        current_gps_timestamp = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt")
+                        last_accepted_timestamp = getattr(self, "_last_accepted_gps_timestamp", None)
+                        
+                        # If we have no previous timestamp, this is the baseline - save it but don't count it as fresh
+                        if not last_accepted_timestamp:
+                            if current_gps_timestamp:
+                                is_baseline_gps = True
+                                gps_is_fresh = False  # Don't increment counter for baseline GPS
+                                _LOGGER.info(
+                                    "First GPS detected as baseline: %s (stationary_count=%d), counter will not increment until newer GPS arrives",
+                                    current_gps_timestamp, int(self.stationary_count)
+                                )
+                        # Otherwise, check if current is newer than the last accepted
+                        elif current_gps_timestamp and last_accepted_timestamp:
+                            try:
+                                if int(str(current_gps_timestamp)) <= int(str(last_accepted_timestamp)):
+                                    gps_is_fresh = False
+                                    _LOGGER.info(
+                                        "WARNING: GPS timestamp %s is not newer than last accepted %s (stationary_count=%d requires fresh GPS), skipping counter increment",
+                                        current_gps_timestamp, last_accepted_timestamp, int(self.stationary_count)
+                                    )
+                            except Exception:
+                                # If we can't compare, assume fresh
+                                pass
+                        
+                        _LOGGER.info("GPS freshness check: should_check=%s, is_fresh=%s, is_baseline=%s, current_ts=%s, last_accepted_ts=%s", 
+                                    should_check_timestamp, gps_is_fresh, is_baseline_gps,
+                                    current_gps_timestamp if current_gps_timestamp else "None",
+                                    last_accepted_timestamp if last_accepted_timestamp else "None")
+                    
+                    # Special handling for stationary_count=0: don't increment counter, just set candidate
+                    if int(getattr(self, "stationary_count", 0)) == 0:
+                        # stationary_count=0: immediate alarm mode, no counting needed
+                        if self._stationary_candidate is None:
+                            # First time, just set the candidate
+                            candidate = (lat_f, lon_f)
+                            counter = 0  # Keep counter at 0
+                            _LOGGER.info("stationary_count=0: Setting initial candidate, counter stays at 0")
+                        else:
+                            # Keep existing candidate and counter at 0
+                            candidate = self._stationary_candidate
+                            counter = 0
+                    # For stationary_count > 0: update counter if GPS is fresh
+                    elif gps_is_fresh:
+                        # update stationary candidate and counter using helper
+                        candidate, counter = update_stationary_counter(
+                            self._stationary_candidate, self._stationary_counter, (lat_f, lon_f), self.tolerance_radius
+                        )
+                        
+                        # Cap the counter to avoid infinite growth
+                        # Allow some margin above stationary_count, but don't let it grow indefinitely
+                        max_counter = max(int(self.stationary_count) + 5, 10)  # At least 10, or stationary_count + 5
+                        if counter > max_counter:
+                            counter = max_counter
+                            _LOGGER.debug("Counter capped at %d to prevent infinite growth", max_counter)
+                        
+                        # Save the timestamp of this fresh GPS update for future comparisons
+                        if should_check_timestamp:
+                            current_gps_timestamp = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt")
+                            if current_gps_timestamp:
+                                self._last_accepted_gps_timestamp = current_gps_timestamp
+                                _LOGGER.info("Accepted fresh GPS, saved timestamp: %s", current_gps_timestamp)
+                    else:
+                        # GPS is stale (not fresh) or baseline
+                        if is_baseline_gps:
+                            # First GPS (baseline): set it as candidate but don't increment counter
+                            candidate = (lat_f, lon_f)
+                            counter = 0
+                            
+                            # Save baseline GPS timestamp as the reference for future comparisons
+                            if should_check_timestamp:
+                                current_gps_timestamp = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt")
+                                if current_gps_timestamp:
+                                    self._last_accepted_gps_timestamp = current_gps_timestamp
+                                    _LOGGER.info("Saved baseline GPS timestamp: %s", current_gps_timestamp)
+                        else:
+                            # GPS is stale (older than baseline) - keep current candidate and counter
+                            candidate = self._stationary_candidate
+                            counter = self._stationary_counter
+                            _LOGGER.info("Keeping current candidate and counter due to stale GPS")
+                    
+                    # Check if position moved outside tolerance
+                    # For stationary_count=0: position changed if candidate is different and we had one before
+                    # For stationary_count>0: position changed if counter reset to 1 with new candidate
+                    if int(getattr(self, "stationary_count", 0)) == 0:
+                        position_changed = (self._stationary_candidate is not None and 
+                                          self._stationary_candidate != candidate and 
+                                          candidate is not None)
+                    else:
+                        position_changed = (counter == 1 and self._stationary_candidate != candidate)
+                    
+                    if is_baseline_gps:
+                        _LOGGER.info(
+                            "Position mode: baseline GPS set, counter stays at %d (requires fresh GPS to increment)",
+                            counter
+                        )
+                    else:
+                        _LOGGER.info(
+                            "Position mode: counter changed from %d to %d, position_changed=%s",
+                            self._stationary_counter, counter, position_changed
+                        )
+                    
                     self._stationary_candidate = candidate
                     self._stationary_counter = counter
+                    
+                    _LOGGER.info(
+                        "Updated state: candidate=%s, counter=%d",
+                        candidate, counter
+                    )
 
-                    # if this is the start of a new candidate, record the start UTC
-                    if counter == 1:
+                    # if this is the start of a new candidate (position changed), record the start UTC
+                    if position_changed:
                         try:
                             from datetime import datetime
 
                             self._stationary_start_utc = datetime.utcnow().strftime('%Y%m%d%H%M%S')
                         except Exception:
                             self._stationary_start_utc = None
+                        
+                        # NOTE: We do NOT reset _last_accepted_gps_timestamp here!
+                        # We just accepted a fresh GPS for this new position, so keep that timestamp
+                        _LOGGER.info("Position changed: new candidate detected, timer will restart")
+                        
                         # capture candidate gpsUtcDt if present for later verification
                         try:
                             self._stationary_candidate_gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or None
                         except Exception:
                             self._stationary_candidate_gpsUtcDt = None
-
-                    # schedule/refresh timer for stationary_minutes
-                    if self._stationary_handle:
-                        self._stationary_handle()
-                    self._stationary_handle = async_call_later(
-                        self.hass,
-                        self.stationary_minutes * 60,
-                        lambda _now: self.hass.async_create_task(self._stationary_check(lat_f, lon_f)),
-                    )
+                        
+                        # Position changed: cancel existing timer and start a new one
+                        if self._stationary_handle:
+                            _LOGGER.info("Position changed: cancelling existing timer")
+                            self._stationary_handle()
+                        
+                        # Create async callback - async_call_later will handle thread safety
+                        async def _timer_expired(_now):
+                            _LOGGER.info("TIMER EXPIRED CALLBACK INVOKED (position changed branch)")
+                            await self._stationary_check(lat_f, lon_f)
+                        
+                        _LOGGER.info(
+                            "Position changed: starting new timer for %d seconds",
+                            self.stationary_minutes * 60
+                        )
+                        
+                        self._stationary_handle = async_call_later(
+                            self.hass,
+                            self.stationary_minutes * 60,
+                            _timer_expired,
+                        )
+                    else:
+                        # Position still stable (within tolerance): timer continues running
+                        # Only start timer if it doesn't exist yet
+                        if not self._stationary_handle:
+                            # Create async callback - async_call_later will handle thread safety
+                            async def _timer_expired(_now):
+                                _LOGGER.info("TIMER EXPIRED CALLBACK INVOKED (stable position branch)")
+                                await self._stationary_check(lat_f, lon_f)
+                            
+                            _LOGGER.info(
+                                "Position stable (counter=%d): starting initial timer for %d seconds",
+                                counter, self.stationary_minutes * 60
+                            )
+                            
+                            self._stationary_handle = async_call_later(
+                                self.hass,
+                                self.stationary_minutes * 60,
+                                _timer_expired,
+                            )
+                        else:
+                            _LOGGER.info(
+                                "Position stable (counter=%d): timer already running, no action needed",
+                                counter
+                            )
 
                     # If activation is 'combined' and the tag is disconnected we only
                     # finalize when both connection and stationary criteria are met.
@@ -586,6 +830,22 @@ class VehicleCoordinator:
         _LOGGER.debug("State saved after alarm_active change (entry_id=%s, coordinator_id=%s)", 
                      self.entry_id, id(self))
 
+        # If we're disabling the alarm, reset position mode state for fresh monitoring
+        if not self.alarm_active and previous:
+            # Reset position mode tracking variables to start fresh
+            self._stationary_counter = 0
+            self._stationary_candidate = None
+            self._stationary_candidate_gpsUtcDt = None
+            self._last_accepted_gps_timestamp = None
+            self._last_processed_gps_timestamp = None
+            
+            # Cancel any pending stationary timer
+            if self._stationary_handle:
+                self._stationary_handle()
+                self._stationary_handle = None
+            
+            _LOGGER.info("Position mode state reset after alarm deactivation: counter=0, candidate=None, timer cancelled (entry_id=%s)", self.entry_id)
+        
         # If we're enabling (either fresh enable OR re-enable while already active)
         # In case of re-enable, reset the awaiting flag to search for fresh GPS again
         if self.alarm_active:
@@ -817,7 +1077,7 @@ class VehicleCoordinator:
         # Send notification based on reason
         # Send for "save", "start", and "disconnect" (connection mode auto-activation)
         # Do NOT send for "stationary" (would be too noisy)
-        if self.notifier and reason in ("save", "start", "disconnect"):
+        if self.notifier and reason in ("save", "start", "disconnect", "stationary"):
             try:
                 from .utils import translate
                 
@@ -828,8 +1088,8 @@ class VehicleCoordinator:
                 vehicle_name = self.get_vehicle_name()
                 
                 # Build message based on reason using translations
-                if reason in ("start", "disconnect"):
-                    # Both start and disconnect activate monitoring
+                if reason in ("start", "disconnect", "stationary"):
+                    # start, disconnect, and stationary all activate monitoring
                     title = await translate(self.hass, "messages.monitoring_activated_title", "🟢 Monitoring activated")
                     title = f"{title} [{vehicle_name}]"
                     
@@ -842,14 +1102,20 @@ class VehicleCoordinator:
                     }
                     mode_display = mode_names.get(self.activation_mode, self.activation_mode.capitalize())
                     
-                    # Different message for disconnect vs manual start
+                    # Different message based on trigger reason
                     if reason == "disconnect":
                         message_template = await translate(
                             self.hass, 
                             "messages.connection_mode_disconnect", 
                             "Tag disconnected. Alarm activated.\nMode: {mode}\n📍 {map_url}"
                         )
-                    else:
+                    elif reason == "stationary":
+                        message_template = await translate(
+                            self.hass, 
+                            "messages.position_mode_stationary", 
+                            "Position stable. Alarm activated.\nMode: {mode}\n📍 {map_url}"
+                        )
+                    else:  # reason == "start"
                         message_template = await translate(
                             self.hass, 
                             "messages.monitoring_activated_message", 
@@ -1005,18 +1271,40 @@ class VehicleCoordinator:
 
     async def _stationary_check(self, lat: float, lon: float) -> None:
         """Called after stationary_minutes to verify position remained the same and save it."""
+        _LOGGER.info(
+            "_stationary_check CALLED: position (%.7f, %.7f), counter=%d, stationary_count=%d",
+            lat, lon, self._stationary_counter, self.stationary_count
+        )
+        if self.debug_mode:
+            _LOGGER.debug(
+                "[%s] TIMER EXPIRED: Stationary check triggered for position (%.7f, %.7f), counter=%d, stationary_count=%d",
+                self.get_vehicle_name(), lat, lon, self._stationary_counter, self.stationary_count
+            )
+        
         # get current tracker coords
         # this method will only save if coordinates didn't change significantly
         # fetch latest from device tracker entity if available in config
         device_entity = self.config.get("device_tracker")
+        _LOGGER.info("Step 1: device_entity=%s", device_entity)
         if not device_entity:
+            _LOGGER.info("ERROR: No device_tracker configured, aborting")
+            if self.debug_mode:
+                _LOGGER.debug("[%s] No device_tracker configured, aborting", self.get_vehicle_name())
             return
         state = self.hass.states.get(device_entity)
+        _LOGGER.info("Step 2: state=%s", "found" if state else "None")
         if not state:
+            _LOGGER.info("ERROR: Device tracker state not found, aborting")
+            if self.debug_mode:
+                _LOGGER.debug("[%s] Device tracker state not found, aborting", self.get_vehicle_name())
             return
         current_lat = state.attributes.get("latitude")
         current_lon = state.attributes.get("longitude")
+        _LOGGER.info("Step 3: current GPS = (%.7f, %.7f)", current_lat or 0, current_lon or 0)
         if current_lat is None or current_lon is None:
+            _LOGGER.info("ERROR: No GPS coordinates in device tracker, aborting")
+            if self.debug_mode:
+                _LOGGER.debug("[%s] No GPS coordinates in device tracker, aborting", self.get_vehicle_name())
             return
         try:
             current_lat = float(current_lat)
@@ -1027,35 +1315,76 @@ class VehicleCoordinator:
         # if the coords didn't change beyond tolerance_radius (meters), consider save
         try:
             dist = haversine_distance(lat, lon, current_lat, current_lon)
-        except Exception:
+            _LOGGER.info("Step 4: distance = %.2f meters (tolerance: %.2f)", dist, float(self.tolerance_radius))
+        except Exception as e:
+            _LOGGER.info("ERROR: Error calculating distance: %s, aborting", e)
+            if self.debug_mode:
+                _LOGGER.debug("[%s] Error calculating distance, aborting", self.get_vehicle_name())
             return
+        
+        if self.debug_mode:
+            _LOGGER.debug(
+                "[%s] Distance from initial position: %.2f meters (tolerance: %.2f)",
+                self.get_vehicle_name(), dist, float(self.tolerance_radius)
+            )
+        
         if dist <= float(self.tolerance_radius):
+            _LOGGER.info("Step 5: Position within tolerance, checking stationary_count requirements")
             # In 'position' mode optionally require stationary_count threshold
+            _LOGGER.info("Step 6: activation_mode=%s, stationary_count=%d, counter=%d", 
+                        self.activation_mode, int(getattr(self, "stationary_count", 0)), int(getattr(self, "_stationary_counter", 0)))
             if self.activation_mode == "position" and int(getattr(self, "stationary_count", 0)) > 0:
                 if int(getattr(self, "_stationary_counter", 0)) < int(self.stationary_count):
                     # not enough repeated reports yet
+                    _LOGGER.info("WARNING: Stationary counter %d below required %d, skipping save", 
+                                self._stationary_counter, self.stationary_count)
                     if self.debug_mode:
-                        _LOGGER.debug("Stationary counter %s below required %s, skipping save", self._stationary_counter, self.stationary_count)
+                        _LOGGER.debug(
+                            "[%s] Stationary counter %s below required %s, skipping save",
+                            self.get_vehicle_name(), self._stationary_counter, self.stationary_count
+                        )
                     return
+            
+            _LOGGER.info("Step 7: Counter requirement met, proceeding with activation")
+            if self.debug_mode:
+                _LOGGER.debug(
+                    "[%s] Position stable within tolerance, proceeding with activation (counter=%d, required=%d)",
+                    self.get_vehicle_name(), self._stationary_counter, self.stationary_count
+                )
 
             # if candidate provided a gpsUtcDt and we recorded a start UTC, ensure gps is newer
+            # NOTE: Skip this check when stationary_count=0 (immediate alarm mode)
+            # When stationary_count > 0, we need fresh GPS positions for validation
             try:
                 candidate_gps = getattr(self, "_stationary_candidate_gpsUtcDt", None)
                 start_utc = getattr(self, "_stationary_start_utc", None)
-                if candidate_gps and start_utc:
+                _LOGGER.info("Step 8: GPS timestamp check - candidate_gps=%s, start_utc=%s, stationary_count=%d", 
+                            candidate_gps, start_utc, int(getattr(self, "stationary_count", 0)))
+                
+                # Only enforce timestamp check when stationary_count > 0 (requires fresh positions)
+                # When stationary_count = 0, skip check and activate after stationary_minutes
+                if int(getattr(self, "stationary_count", 0)) > 0 and candidate_gps and start_utc:
                     # compare as integers if possible (format YYYYMMDDHHMMSS)
                     try:
                         if int(str(candidate_gps)) <= int(str(start_utc)):
+                            _LOGGER.info("WARNING: Candidate gpsUtcDt %s is not newer than start %s; skipping save (stationary_count=%d requires fresh GPS)", 
+                                        candidate_gps, start_utc, int(self.stationary_count))
                             if self.debug_mode:
                                 _LOGGER.debug("Candidate gpsUtcDt %s is not newer than start %s; skipping save", candidate_gps, start_utc)
                             return
                     except Exception:
                         # non-numeric gpsUtcDt: fall back to saving
                         pass
+                else:
+                    if int(getattr(self, "stationary_count", 0)) == 0:
+                        _LOGGER.info("Skipping timestamp check (stationary_count=0: immediate alarm mode)")
+                    else:
+                        _LOGGER.info("Skipping timestamp check (no GPS timestamp available)")
             except Exception:
                 pass
 
             # collect metadata from the last known device attrs if available
+            _LOGGER.info("Step 9: Collecting metadata and calling _async_save_position")
             try:
                 device_entity = self.config.get("device_tracker")
                 state = self.hass.states.get(device_entity) if device_entity else None
@@ -1077,10 +1406,15 @@ class VehicleCoordinator:
                         last_op = ops[0] or {}
                         gpsUtcDt = last_op.get("extra", {}).get("gpsUtcDt") or last_op.get("gpsUtcDt")
                         locationType = last_op.get("extra", {}).get("locationType") or last_op.get("locationType")
+                _LOGGER.info("Step 10: About to save position (%.7f, %.7f) with reason='stationary'", current_lat, current_lon)
                 await self._async_save_position(current_lat, current_lon, gpsUtcDt=gpsUtcDt, locationType=locationType, last_seen=last_seen, reason="stationary")
-            except Exception:
+                _LOGGER.info("Step 11: _async_save_position completed successfully")
+            except Exception as e:
                 # ensure we don't crash the timer callback
-                _LOGGER.exception("Error while finalizing stationary save")
+                _LOGGER.exception("ERROR: Error while finalizing stationary save: %s", e)
+        else:
+            _LOGGER.info("WARNING: Distance %.2f meters exceeds tolerance %.2f meters, position moved, not saving", 
+                        dist, float(self.tolerance_radius))
 
     async def _notify_movement(self, lat: float, lon: float) -> None:
         """Notify configured notifier that the vehicle moved from saved position."""

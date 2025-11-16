@@ -372,7 +372,11 @@ def build_create_payload(user_input: dict, base: dict | None = None) -> tuple[di
     if CONF_STATIONARY_MINUTES in user_input:
         options[CONF_STATIONARY_MINUTES] = int(user_input.get(CONF_STATIONARY_MINUTES))
     if CONF_STATIONARY_COUNT in user_input:
-        options[CONF_STATIONARY_COUNT] = int(user_input.get(CONF_STATIONARY_COUNT))
+        # Explicitly convert to int, including 0
+        options[CONF_STATIONARY_COUNT] = int(user_input.get(CONF_STATIONARY_COUNT, 0))
+    elif base and CONF_STATIONARY_COUNT in base:
+        # Preserve existing value from base if not in user_input
+        options[CONF_STATIONARY_COUNT] = int(base.get(CONF_STATIONARY_COUNT, 3))
 
     return data, options
 

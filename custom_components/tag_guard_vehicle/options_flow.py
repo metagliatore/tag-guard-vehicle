@@ -133,10 +133,13 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
                 stationary_text = await translate(
                     hass,
                     "messages.stationary_help",
-                    "Stationary checks — how long (minutes) and how many samples must be observed in the same area before saving (e.g. 10 minutes and 3 samples).",
+                    "Position mode activates when vehicle remains stationary for the configured time. "
+                    "Time: how many minutes the position must remain stable. "
+                    "Count: how many GPS samples must be received (0 = bypass counter check, use time only). "
+                    "Example: 10 minutes + 3 samples = activate after 10 minutes with at least 3 stable GPS readings.",
                 )
             else:
-                stationary_text = "Stationary checks: how long and how many samples to consider a stable position before saving."
+                stationary_text = "Stationary checks: Time (minutes) and Count (GPS samples, 0=bypass). Example: 10 min + 3 samples."
             placeholders = {"stationary_help": stationary_text}
             return self.async_show_form(
                 step_id="stationary",
@@ -146,7 +149,7 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
                         NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="min")
                     ),
                     vol.Required(CONF_STATIONARY_COUNT, default=current.get(CONF_STATIONARY_COUNT, 3)): NumberSelector(
-                        NumberSelectorConfig(min=1, max=20, step=1, mode=NumberSelectorMode.SLIDER)
+                        NumberSelectorConfig(min=0, max=20, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="samples")
                     ),
                 }
             ),

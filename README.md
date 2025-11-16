@@ -66,6 +66,10 @@ You need one of these integrations installed to provide the `device_tracker` ent
 
 - **`connection`** - Activates when Bluetooth disconnects (fastest)
 - **`position`** - Activates when position is stable for X minutes (most accurate)
+  - 📖 **[Complete Position Mode Guide](POSITION_MODE_GUIDE.md)** - Detailed configuration, timer behavior, troubleshooting
+  - 🎯 **Smart GPS baseline detection** - First GPS timestamp saved as reference, counter increments only with fresh updates
+  - ⚡ **Optimized processing** - Skips duplicate GPS updates to reduce log spam and improve efficiency
+  - 🔄 **Auto-reset on stop** - Position tracking resets when alarm is deactivated for fresh monitoring
 - **`combined`** - Requires both disconnect AND stable position (recommended)
 - **`manual`** - Only activates via service call or webhook
 
@@ -330,8 +334,12 @@ Or via integration options: **Configure** → **Enable debug mode**
 | `notifier` | Home Assistant notify service | `notify.notify` |
 | `tolerance_radius_m` | Alert distance in meters | `200` |
 | `stationary_minutes` | Minutes stable before activation (position/combined modes) | `3` |
-| `stationary_count` | GPS readings required (position/combined modes) | `2` |
+| `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `2` |
 | `debug_mode` | Enable verbose logging | `false` |
+
+**Position Mode Notes:**
+- `stationary_count=0`: Immediate activation after configured minutes (no GPS freshness check)
+- `stationary_count=1+`: Requires N fresh GPS updates before activating (ensures accurate position)
 
 ## Advanced Features
 

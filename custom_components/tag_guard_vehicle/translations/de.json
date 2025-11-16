@@ -6,7 +6,8 @@
       "monitoring_activated_title": "🟢 Überwachung aktiviert",
       "monitoring_activated_message": "Alarm aktiv. Überwachung der aktuellen Position.\nMode: {mode}\n📍 {map_url}",
       "connection_mode_disconnect": "Tag getrennt. Alarm aktiviert.\nModus: Verbindung\n📍 {map_url}",
-            "position_saved_title": "📍 Position gespeichert",
+      "position_mode_stationary": "Position stabil. Alarm aktiviert.\\nModus: {mode}\\n📍 {map_url}",
+      "position_saved_title": "📍 Position gespeichert",
       "position_saved_message": "Parkposition gespeichert.\n📍 {map_url}",
       "alarm_disabled": "Alarm per Benachrichtigung deaktiviert",
       "vehicle_tracker_title": "Fahrzeug-Tracker",
@@ -33,7 +34,7 @@
       "tracker_label": "Tracker",
       "entity_not_found": "Entität {entity} nicht gefunden",
       "debug_help": "Aktivieren Sie ausführliche Debug-Logs (nur für Fehlersuche).",
-      "stationary_help": "Stationary-Parameter: wie lange und wie viele Messungen vor dem Speichern als stabil gelten."
+      "stationary_help": "Der Positionsmodus aktiviert sich, wenn das Fahrzeug für die konfigurierte Zeit stationär bleibt. Zeit: wie viele Minuten die Position stabil bleiben muss. Zähler: wie viele GPS-Proben empfangen werden müssen (0 = Zähler umgehen, nur Zeit verwenden). Beispiel: 10 Minuten + 3 Proben = aktiviert nach 10 Minuten mit mindestens 3 stabilen GPS-Messungen."
     }
   }
 }
