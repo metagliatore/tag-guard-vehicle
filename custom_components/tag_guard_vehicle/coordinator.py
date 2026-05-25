@@ -103,6 +103,41 @@ class VehicleCoordinator:
         """Send debug message to logger."""
         _LOGGER.debug(message)
 
+    def _to_epoch_ms(self, ts: Any) -> int | None:
+        """Convert supported timestamp formats to epoch milliseconds."""
+        if ts is None:
+            return None
+        try:
+            from datetime import datetime, timezone
+
+            s = str(ts).strip()
+            if not s:
+                return None
+
+            if s.isdigit():
+                if len(s) == 14:
+                    dt = datetime.strptime(s, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+                    return int(dt.timestamp() * 1000)
+                if len(s) == 10:
+                    return int(s) * 1000
+                if len(s) == 13:
+                    return int(s)
+                n = int(s)
+                return n if n > 10**12 else n * 1000
+
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return int(dt.timestamp() * 1000)
+        except Exception:
+            return None
+
+    def _is_gps_newer_than(self, gps_ts: Any, reference_ts: Any) -> bool:
+        """Return True if gps_ts is newer than reference_ts."""
+        gps_ms = self._to_epoch_ms(gps_ts)
+        ref_ms = self._to_epoch_ms(reference_ts)
+        return gps_ms is not None and ref_ms is not None and gps_ms > ref_ms
+
     async def async_load(self) -> None:
         # Apply options FIRST if present in config (before loading storage)
         # This ensures activation_mode is set correctly before we check it
@@ -776,10 +811,10 @@ class VehicleCoordinator:
                     gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or attrs.get("gpsUtcDt")
                 except Exception:
                     gpsUtcDt = None
-                # if gpsUtcDt is available and numeric, and we have stored activation_time
+                # if gpsUtcDt is available and newer than activation time
                 act_time = getattr(self, "_activation_time_str", None)
                 try:
-                    if act_time and gpsUtcDt and str(gpsUtcDt).isdigit() and int(str(gpsUtcDt)) > int(str(act_time)):
+                    if act_time and gpsUtcDt and self._is_gps_newer_than(gpsUtcDt, act_time):
                         # coordinates should already be present in latitude/longitude (above block)
                         if latitude is not None and longitude is not None:
                             # Determine reason: use "save" if not alarm_active, "start" if alarm is active
@@ -875,10 +910,13 @@ class VehicleCoordinator:
                 _LOGGER.debug("Device state retrieved: %s (entry_id=%s)", "found" if state else "NOT FOUND", self.entry_id)
                 if state:
                     try:
-                        from .utils import extract_coords_from_ops_attrs_by_model, safe_get
+                        from .utils import extract_coords_from_ops_attrs_by_model, parse_connection_state_by_model, safe_get
 
                         ops = state.attributes.get("ops") or []
                         last_op = ops[0] if isinstance(ops, (list, tuple)) and len(ops) > 0 else {}
+                        _connected, parsed_last_op = parse_connection_state_by_model(self.config.get("tag_model"), ops, state.attributes)
+                        if parsed_last_op:
+                            last_op = parsed_last_op
                         lat, lon = extract_coords_from_ops_attrs_by_model(self.config.get("tag_model"), last_op, state.attributes)
                         gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or state.attributes.get("gpsUtcDt")
                         
@@ -888,10 +926,10 @@ class VehicleCoordinator:
                         _LOGGER.debug("Position check: act_ts=%s, gpsUtcDt=%s, lat=%s, lon=%s (entry_id=%s)", 
                                      act_ts, gpsUtcDt, lat, lon, self.entry_id)
                         
-                        # only accept numeric YYYYMMDDHHMMSS style timestamps for now
-                        if act_ts and gpsUtcDt and str(gpsUtcDt).isdigit():
+                        # accept legacy, epoch, and ISO timestamp formats
+                        if act_ts and gpsUtcDt:
                             try:
-                                if int(str(gpsUtcDt)) > int(str(act_ts)):
+                                if self._is_gps_newer_than(gpsUtcDt, act_ts):
                                     if lat is not None and lon is not None:
                                         _LOGGER.info("Saving position on activation: GPS is newer (entry_id=%s)", self.entry_id)
                                         await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=None, last_seen=state.attributes.get("last_seen"), reason="start")
@@ -1209,17 +1247,20 @@ class VehicleCoordinator:
         
         # Extract gpsUtcDt from ops attributes
         try:
-            from .utils import extract_coords_from_ops_attrs_by_model, safe_get
+            from .utils import extract_coords_from_ops_attrs_by_model, parse_connection_state_by_model, safe_get
             
             ops = state.attributes.get("ops") or []
             last_op = ops[0] if isinstance(ops, (list, tuple)) and len(ops) > 0 else {}
+            _connected, parsed_last_op = parse_connection_state_by_model(self.config.get("tag_model"), ops, state.attributes)
+            if parsed_last_op:
+                last_op = parsed_last_op
             gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or state.attributes.get("gpsUtcDt")
             
-            # Check if GPS timestamp is fresh (numeric YYYYMMDDHHMMSS format)
+            # Check if GPS timestamp is fresh (supports legacy, epoch, ISO)
             is_fresh = False
-            if gpsUtcDt and str(gpsUtcDt).isdigit():
+            if gpsUtcDt:
                 try:
-                    if int(str(gpsUtcDt)) > int(current_time_str):
+                    if self._is_gps_newer_than(gpsUtcDt, current_time_str):
                         is_fresh = True
                         _LOGGER.debug("Position is fresh: gpsUtcDt=%s > current_time=%s", gpsUtcDt, current_time_str)
                 except Exception:

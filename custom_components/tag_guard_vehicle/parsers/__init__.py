@@ -5,12 +5,12 @@ Each parser module should expose at minimum:
 - extract_coords_from_ops_attrs(last_op, attrs) -> (lat, lon)
 
 Register new parsers by adding a module in this package named after the brand
-or model (e.g. `samsung.py`) and ensure the module-level functions above are
+or model (e.g. `vedeneb_ha_smartthings_find.py`) and ensure the module-level functions above are
 present.
 """
 from typing import Callable, Dict, Optional, Tuple
 
-# Simple registry mapping keys (e.g. 'samsung_smarttag2') to parser callables.
+# Simple registry mapping keys (e.g. 'vedeneb_ha_smartthings_find') to parser callables.
 _REGISTRY: Dict[str, Dict[str, Callable]] = {}
 
 
@@ -27,9 +27,22 @@ def get_parser(key: str) -> Optional[Dict[str, Callable]]:
 
 # Auto-register known parsers if present
 try:
-    from . import samsung as samsung_parser
+    from . import vedeneb_ha_smartthings_find as vedeneb_parser
 
-    register("samsung_smarttag2", samsung_parser.parse_connection_state, samsung_parser.extract_coords_from_ops_attrs)
+    register("vedeneb_ha_smartthings_find", vedeneb_parser.parse_connection_state, vedeneb_parser.extract_coords_from_ops_attrs)
+    register("samsung_smarttag2", vedeneb_parser.parse_connection_state, vedeneb_parser.extract_coords_from_ops_attrs)
+except Exception:
+    # ignore missing optional parsers
+    pass
+
+try:
+    from . import smartthings_find_by_pixelshober as st_find_parser
+
+    register(
+        "pixelshober_ha_smartthings_find",
+        st_find_parser.parse_connection_state,
+        st_find_parser.extract_coords_from_ops_attrs,
+    )
 except Exception:
     # ignore missing optional parsers
     pass

@@ -194,6 +194,82 @@ async def test_save_with_require_false_saves_immediately():
     print("✅ Test 3 PASSED: require_fresh_position=False saved immediately")
 
 
+@pytest.mark.asyncio
+async def test_save_with_epoch_ms_gps_saves_immediately_for_pixelshober_model():
+    """Epoch-ms gpsUtcDt (SmartThings-Find style) should be treated as fresh when newer."""
+    from custom_components.tag_guard_vehicle.coordinator import VehicleCoordinator
+    from datetime import datetime, timezone
+
+    class FakeStore:
+        async def async_load(self):
+            return None
+
+        async def async_save(self, data):
+            pass
+
+    class FakeHass:
+        def __init__(self):
+            self.services = self
+            self.states_map = {}
+
+        class States:
+            def __init__(self, parent):
+                self.parent = parent
+
+            def get(self, entity_id):
+                return self.parent.states_map.get(entity_id)
+
+        @property
+        def states(self):
+            return self.States(self)
+
+        async def async_call(self, domain, service, data):
+            pass
+
+    class FakeState:
+        def __init__(self):
+            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            self.attributes = {
+                "latitude": 45.123,
+                "longitude": 9.456,
+                "raw_item": {
+                    "geolocations": [
+                        {
+                            "nearby": True,
+                            "d2dStatus": "bleScanned",
+                            "latitude": "45.123",
+                            "longitude": "9.456",
+                            "lastUpdateTime": now_ms + 5000,
+                            "method": "fused",
+                        }
+                    ]
+                },
+                "location_found": True,
+                "update_success": True,
+                "last_seen": "2026-05-25T17:39:59.125000+00:00",
+            }
+
+    hass = FakeHass()
+    config = {
+        "device_tracker": "device_tracker.test",
+        "tag_model": "pixelshober_ha_smartthings_find",
+        "notifier": "test_notify",
+        "options": {},
+    }
+
+    coordinator = VehicleCoordinator(hass, "test_entry", config)
+    coordinator.store = FakeStore()
+    hass.states_map["device_tracker.test"] = FakeState()
+
+    await coordinator._async_save_position_with_freshness_check(
+        45.123, 9.456, require_fresh_position=True, reason="save"
+    )
+
+    assert coordinator.saved_latitude == 45.123
+    assert coordinator.saved_longitude == 9.456
+    assert coordinator._awaiting_activation_save is False
+
+
 if __name__ == "__main__":
     import asyncio
     

@@ -1,10 +1,8 @@
-"""Parsers for Samsung SmartTag2 ops payloads."""
-
-from typing import Any
+"""Parser for Vedeneb/HA-SmartThings-Find payloads."""
 
 
 def parse_connection_state(ops, attrs):
-    """Determine connection state from ops and attrs for Samsung SmartTag2.
+    """Determine connection state from ops and attrs.
 
     Returns (connected: bool, last_op: dict).
     """
@@ -36,10 +34,11 @@ def parse_connection_state(ops, attrs):
 
 
 def extract_coords_from_ops_attrs(last_op, attrs):
-    """Extract (lat, lon) from last_op or attrs with common fallbacks for Samsung SmartTag2.
+    """Extract (lat, lon) from last_op or attrs with common fallbacks.
 
     Returns (lat, lon) or (None, None).
     """
+
     def _safe_get(d, *keys, default=None):
         cur = d
         for k in keys:

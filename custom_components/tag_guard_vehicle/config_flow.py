@@ -190,7 +190,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_NOTIFIER: parts[2].strip(),
                             CONF_TOLERANCE_RADIUS: int(parts[3].strip()) if parts[3].strip().isdigit() else 200,
                             CONF_ACTIVATION_MODE: parts[4].strip() if parts[4].strip() in ["connection", "position", "combined", "manual"] else "manual",
-                            "tag_model": parts[5].strip() if parts[5].strip() in TAG_MODELS else "samsung_smarttag2",
+                            "tag_model": parts[5].strip() if parts[5].strip() in TAG_MODELS else "vedeneb_ha_smartthings_find",
                             "webhook_token": parts[6].strip() or "",
                             "debug_mode": parts[7].strip().lower() == "true",
                         }
@@ -210,7 +210,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema(
                 {
                     # 1. Tag Model - FIRST FIELD (primary selection)
-                    vol.Required("tag_model", default=stub_data.get("tag_model", "samsung_smarttag2")): SelectSelector(
+                    vol.Required("tag_model", default=stub_data.get("tag_model", "vedeneb_ha_smartthings_find")): SelectSelector(
                         SelectSelectorConfig(
                             options=list(TAG_MODELS.keys()),
                             mode=SelectSelectorMode.DROPDOWN,

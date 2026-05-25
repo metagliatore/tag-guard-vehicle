@@ -1,0 +1,141 @@
+{
+  "info": {
+    "name": "Tag Guard Vehicle - Webhook API",
+    "description": "Collection per testare tutte le azioni del webhook",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "START - Attiva monitoraggio",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"start\"\n}"
+        },
+        "url": {
+          "raw": "https://{{HA_IP}}:8123/api/webhook/{{WEBHOOK_TOKEN}}",
+          "protocol": "https",
+          "host": ["{{HA_IP}}"],
+          "port": "8123",
+          "path": ["api", "webhook", "{{WEBHOOK_TOKEN}}"]
+        },
+        "description": "Attiva completamente il monitoraggio.\n\n**Effetto:**\n- alarm_active = true\n- Il sistema inizia a monitorare movimenti/connessione"
+      }
+    },
+    {
+      "name": "DISARM - Disattiva monitoraggio",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"disarm\"\n}"
+        },
+        "url": {
+          "raw": "https://{{HA_IP}}:8123/api/webhook/{{WEBHOOK_TOKEN}}",
+          "protocol": "https",
+          "host": ["{{HA_IP}}"],
+          "port": "8123",
+          "path": ["api", "webhook", "{{WEBHOOK_TOKEN}}"]
+        },
+        "description": "Disattiva completamente il sistema.\n\n**Effetto:**\n- alarm_active = false\n- position_notified = false\n- Il sistema smette di controllare"
+      }
+    },
+    {
+      "name": "MUTE - Silenzia notifiche",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"mute\"\n}"
+        },
+        "url": {
+          "raw": "https://{{HA_IP}}:8123/api/webhook/{{WEBHOOK_TOKEN}}",
+          "protocol": "https",
+          "host": ["{{HA_IP}}"],
+          "port": "8123",
+          "path": ["api", "webhook", "{{WEBHOOK_TOKEN}}"]
+        },
+        "description": "Silenzia le notifiche ma continua a monitorare.\n\n**Effetto:**\n- position_notified = true\n- alarm_active resta true\n- Il sistema traccia ma non invia alert"
+      }
+    },
+    {
+      "name": "UNMUTE - Riabilita notifiche",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"unmute\"\n}"
+        },
+        "url": {
+          "raw": "https://{{HA_IP}}:8123/api/webhook/{{WEBHOOK_TOKEN}}",
+          "protocol": "https",
+          "host": ["{{HA_IP}}"],
+          "port": "8123",
+          "path": ["api", "webhook", "{{WEBHOOK_TOKEN}}"]
+        },
+        "description": "Riabilita le notifiche dopo un mute.\n\n**Effetto:**\n- position_notified = false\n- alarm_active resta true\n- Il sistema riprende ad inviare notifiche"
+      }
+    },
+    {
+      "name": "SAVE - Salva posizione corrente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save\"\n}"
+        },
+        "url": {
+          "raw": "https://{{HA_IP}}:8123/api/webhook/{{WEBHOOK_TOKEN}}",
+          "protocol": "https",
+          "host": ["{{HA_IP}}"],
+          "port": "8123",
+          "path": ["api", "webhook", "{{WEBHOOK_TOKEN}}"]
+        },
+        "description": "Salva manualmente la posizione dal device_tracker.\n\n**Effetto:**\n- Aggiorna saved_latitude e saved_longitude\n- Utile in modalità manual"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "HA_IP",
+      "value": "YOUR_HA_IP",
+      "type": "string"
+    },
+    {
+      "key": "WEBHOOK_TOKEN",
+      "value": "YOUR_WEBHOOK_TOKEN",
+      "type": "string"
+    }
+  ]
+}

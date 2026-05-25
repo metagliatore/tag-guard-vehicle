@@ -210,8 +210,8 @@ def extract_coords_from_ops_attrs_by_model(tag_model: str | None, last_op, attrs
 
 # Backwards-compatible exports: prefer brand-specific parsers in `parsers/` package.
 try:
-    # prefer samsung parser when available
-    from .parsers.samsung import parse_connection_state as _parse_connection_state, extract_coords_from_ops_attrs as _extract_coords_from_ops_attrs
+    # prefer Vedeneb parser when available
+    from .parsers.vedeneb_ha_smartthings_find import parse_connection_state as _parse_connection_state, extract_coords_from_ops_attrs as _extract_coords_from_ops_attrs
 
     # override local definitions with parser implementations
     parse_connection_state = _parse_connection_state

@@ -18,11 +18,12 @@ DEFAULT_WEBHOOK_ID = "vehicle-save-location"
 
 # Tag models
 TAG_MODELS = {
-    "samsung_smarttag2": "Samsung SmartTag2",
+    "vedeneb_ha_smartthings_find": "Vedeneb/HA-SmartThings-Find",
+    "pixelshober_ha_smartthings_find": "SmartThings-Find by PixelShober",
 }
 
 # Note: keys in TAG_MODELS are intended to match parser registry keys in
-# `parsers/__init__.py` (for example 'samsung_smarttag2'). Adding a new tag
+# `parsers/__init__.py` (for example 'vedeneb_ha_smartthings_find'). Adding a new tag
 # model typically requires adding a parser module under `parsers/` with the
 # same key name.
 
