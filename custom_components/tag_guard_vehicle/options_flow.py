@@ -13,6 +13,9 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     BooleanSelector,
     BooleanSelectorConfig,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .const import (
@@ -76,6 +79,22 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is None:
             # tests may construct the flow without wiring hass to the config entry
             hass = getattr(self, "hass", None) or getattr(self.config_entry, "hass", None)
+            notifier_services = []
+            if hass:
+                try:
+                    all_services = hass.services.async_services()
+                    notify_services = [
+                        f"notify.{service}"
+                        for service in all_services.get("notify", {}).keys()
+                        if service not in ["persistent_notification"]
+                    ]
+                    telegram_services = [
+                        "telegram_bot.send_message"
+                    ] if "send_message" in all_services.get("telegram_bot", {}) else []
+                    notifier_services = notify_services + telegram_services
+                except Exception:
+                    notifier_services = []
+
             if hass:
                 activation_help = await translate(
                     hass,
@@ -85,6 +104,19 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
             else:
                 # fallback when running under tests where hass isn't available
                 activation_help = "The 'manual' activation mode disables automatic saves and requires manual control."
+
+            notifier_selector = (
+                SelectSelector(
+                    SelectSelectorConfig(
+                        options=notifier_services,
+                        mode=SelectSelectorMode.DROPDOWN,
+                        custom_value=True,
+                    )
+                )
+                if notifier_services
+                else TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
+            )
+
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
@@ -92,9 +124,7 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required(CONF_PERSON_ENTITY, default=current.get(CONF_PERSON_ENTITY)): EntitySelector(
                         EntitySelectorConfig(domain="person")
                     ),
-                    vol.Required(CONF_NOTIFIER, default=current.get(CONF_NOTIFIER)): EntitySelector(
-                        EntitySelectorConfig(domain="notify")
-                    ),
+                    vol.Required(CONF_NOTIFIER, default=current.get(CONF_NOTIFIER, notifier_services[0] if notifier_services else "notify.notify")): notifier_selector,
                     vol.Required(CONF_TOLERANCE_RADIUS, default=current.get(CONF_TOLERANCE_RADIUS, 200)): NumberSelector(
                         NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")
                     ),

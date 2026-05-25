@@ -105,15 +105,26 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # present initial form
         if user_input is None:
-            # Get available notify services
+            # Get available notification services (notify + telegram_bot.send_message)
             notify_services = []
+            telegram_services = []
+            notifier_services = []
             try:
-                services = self.hass.services.async_services().get("notify", {})
-                notify_services = [f"notify.{service}" for service in services.keys() if service not in ["persistent_notification"]]
+                all_services = self.hass.services.async_services()
+                notify_domain_services = all_services.get("notify", {})
+                notify_services = [
+                    f"notify.{service}"
+                    for service in notify_domain_services.keys()
+                    if service not in ["persistent_notification"]
+                ]
+                telegram_domain_services = all_services.get("telegram_bot", {})
+                if "send_message" in telegram_domain_services:
+                    telegram_services = ["telegram_bot.send_message"]
+                notifier_services = notify_services + telegram_services
             except Exception:
                 pass
             
-            notify_services_text = ", ".join(notify_services) if notify_services else "No notify services found"
+            notify_services_text = ", ".join(notifier_services) if notifier_services else "No notification services found"
             
             # build translated placeholders (awaited)
             activation_help = await translate(
@@ -141,7 +152,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "notifier_help": await translate(
                     self.hass,
                     "messages.notifier_help",
-                    f"🔔 Notification service to receive alerts. Available services: {notify_services_text}",
+                    f"🔔 Notification service to receive alerts. Available services: {notify_services_text}. Supported: native Home Assistant notify services and telegram_bot.send_message.",
                 ),
                 "tolerance_help": await translate(
                     self.hass,
@@ -230,15 +241,15 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     
                     # 4. Notifier Service
                     # Use SelectSelector if services found, otherwise TextSelector
-                    vol.Required(CONF_NOTIFIER, default=stub_data.get(CONF_NOTIFIER, "demo_user" if not notify_services else notify_services[0].replace("notify.", ""))): 
+                    vol.Required(CONF_NOTIFIER, default=stub_data.get(CONF_NOTIFIER, notifier_services[0] if notifier_services else "notify.notify")):
                         SelectSelector(SelectSelectorConfig(
-                            options=[s.replace("notify.", "") for s in notify_services] if notify_services else ["demo_user", "telegram"],
+                            options=notifier_services if notifier_services else ["notify.notify", "telegram_bot.send_message"],
                             mode=SelectSelectorMode.DROPDOWN,
                             custom_value=True,  # Allow custom input
-                        )) if notify_services else TextSelector(TextSelectorConfig(
+                        )) if notifier_services else TextSelector(TextSelectorConfig(
                             type=TextSelectorType.TEXT,
                         )),
-                    
+
                     # 5. Tolerance Radius
                     vol.Required(CONF_TOLERANCE_RADIUS, default=stub_data.get(CONF_TOLERANCE_RADIUS, 200)): NumberSelector(
                         NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")

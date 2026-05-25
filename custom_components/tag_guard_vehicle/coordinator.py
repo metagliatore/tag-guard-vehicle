@@ -103,6 +103,81 @@ class VehicleCoordinator:
         """Send debug message to logger."""
         _LOGGER.debug(message)
 
+    def _parse_notifier_target(self) -> tuple[str, str, dict[str, Any]]:
+        """Parse notifier target string into (domain, service, extra_data).
+
+        Supported formats:
+        - notify.mobile_app_phone
+        - mobile_app_phone (legacy notify service name)
+        - telegram_bot.send_message
+        - telegram_bot.send_message?config_entry_id=<id>
+        - telegram_bot.send_message|config_entry_id=<id>
+        """
+        notifier_raw = str(self.notifier or "").strip()
+        if not notifier_raw:
+            return "notify", "", {}
+
+        target = notifier_raw
+        query = ""
+        if "|" in notifier_raw:
+            target, query = notifier_raw.split("|", 1)
+        elif "?" in notifier_raw:
+            target, query = notifier_raw.split("?", 1)
+
+        target = target.strip()
+        extra_data: dict[str, Any] = {}
+
+        if query:
+            try:
+                from urllib.parse import parse_qsl
+
+                for key, value in parse_qsl(query, keep_blank_values=True):
+                    if key:
+                        extra_data[key] = value
+            except Exception:
+                pass
+
+        if target.startswith("notify."):
+            return "notify", target.replace("notify.", "", 1), extra_data
+
+        if "." in target:
+            domain, service = target.split(".", 1)
+            return domain, service, extra_data
+
+        return "notify", target, extra_data
+
+    async def _async_send_notification(self, title: str, message: str, map_url: str | None = None, **extra_data: Any) -> None:
+        """Send notification through configured notifier target."""
+        if not self.notifier:
+            return
+
+        domain, service, notifier_extra = self._parse_notifier_target()
+        if not service:
+            _LOGGER.warning("Notifier is configured but service is empty: %s", self.notifier)
+            return
+
+        payload: dict[str, Any] = {"message": message}
+        if title:
+            payload["title"] = title
+
+        payload.update(notifier_extra)
+        payload.update(extra_data)
+
+        # Native notify services: include click-through URL for mobile app notifications
+        if map_url and domain == "notify":
+            data_payload = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+            data_payload["url"] = map_url
+            data_payload["clickAction"] = map_url
+            payload["data"] = data_payload
+
+        # Telegram-like services often ignore title; prepend it to message for clarity
+        if domain != "notify" and title and domain in {"telegram_bot", "telegram"}:
+            payload["message"] = f"{title}\n{message}" if message else title
+            payload.pop("title", None)
+
+        await self.hass.services.async_call(domain, service, payload)
+        _LOGGER.info("Sent notification via %s.%s", domain, service)
+
     def _to_epoch_ms(self, ts: Any) -> int | None:
         """Convert supported timestamp formats to epoch milliseconds."""
         if ts is None:
@@ -967,11 +1042,7 @@ class VehicleCoordinator:
                                     title = await translate(self.hass, "messages.manual_trigger_awaiting_title", "⏳ parking guard activating...")
                                     title = f"{title} [{vehicle_name}]"
                                     message = await translate(self.hass, "messages.manual_trigger_awaiting_message", "Waiting for fresh GPS position to save parking location.")
-                                    await self.hass.services.async_call(
-                                        "notify",
-                                        self.notifier.replace("notify.", ""),
-                                        {"title": title, "message": message},
-                                    )
+                                    await self._async_send_notification(title, message)
                                 except Exception:
                                     _LOGGER.exception("Failed to send waiting notification")
                         else:
@@ -1016,11 +1087,7 @@ class VehicleCoordinator:
                     vehicle_name = self.get_vehicle_name()
                     title = "Alarm disabled via notification"
                     notif_title = f"Vehicle Tracker [{vehicle_name}]"
-                await self.hass.services.async_call(
-                    "notify",
-                    self.notifier,
-                    {"message": title, "title": notif_title},
-                )
+                await self._async_send_notification(notif_title, title)
         elif action == "OPEN_MAP":
             # send map link as notification
             if self.saved_latitude is not None and self.saved_longitude is not None and self.notifier:
@@ -1033,11 +1100,7 @@ class VehicleCoordinator:
                 except Exception:
                     vehicle_name = self.get_vehicle_name()
                     notif_title = f"Open map [{vehicle_name}]"
-                await self.hass.services.async_call(
-                    "notify",
-                    self.notifier,
-                    {"message": url, "title": notif_title},
-                )
+                await self._async_send_notification(notif_title, url, map_url=url)
         else:
             if self.debug_mode:
                 _LOGGER.debug("Unknown notification action received: %s", action)
@@ -1119,7 +1182,6 @@ class VehicleCoordinator:
             try:
                 from .utils import translate
                 
-                service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
                 map_url = f"https://maps.google.com/?q={lat},{lon}"
                 
                 # Get vehicle name for multi-instance identification
@@ -1170,14 +1232,9 @@ class VehicleCoordinator:
                     )
                     message = message_template.format(map_url=map_url)
                 
-                _LOGGER.debug("Sending notification: reason=%s, service=%s", reason, service_name)
-                
-                await self.hass.services.async_call(
-                    "notify",
-                    service_name,
-                    {"title": title, "message": message},
-                )
-                _LOGGER.info("Sent '%s' notification via notify.%s", reason, service_name)
+                _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
+                await self._async_send_notification(title, message, map_url=map_url)
+                _LOGGER.info("Sent '%s' notification", reason)
                     
             except Exception as e:
                 _LOGGER.warning("Failed to send notification: %s", e, exc_info=True)
@@ -1297,11 +1354,7 @@ class VehicleCoordinator:
                         from .utils import translate
                         title = await translate(self.hass, "messages.save_awaiting_title", "⏳ Waiting for fresh GPS...")
                         message = await translate(self.hass, "messages.save_awaiting_message", "Monitoring for fresh GPS position to save parking location.")
-                        await self.hass.services.async_call(
-                            "notify",
-                            self.notifier.replace("notify.", ""),
-                            {"title": title, "message": message},
-                        )
+                        await self._async_send_notification(title, message)
                     except Exception:
                         _LOGGER.exception("Failed to send waiting notification")
         
@@ -1470,8 +1523,6 @@ class VehicleCoordinator:
         
         from .utils import translate
         
-        service_name = self.notifier.replace("notify.", "") if self.notifier.startswith("notify.") else self.notifier
-        
         saved_url = f"https://maps.google.com/?q={self.saved_latitude},{self.saved_longitude}"
         current_url = f"https://maps.google.com/?q={lat},{lon}"
         
@@ -1496,11 +1547,7 @@ class VehicleCoordinator:
         _LOGGER.info("Sending movement alert: distance=%.0fm", distance)
         
         try:
-            await self.hass.services.async_call(
-                "notify", 
-                service_name, 
-                {"title": title, "message": message}
-            )
-            _LOGGER.info("Sent movement notification via notify.%s", service_name)
+            await self._async_send_notification(title, message, map_url=current_url)
+            _LOGGER.info("Sent movement notification")
         except Exception as e:
             _LOGGER.warning("Failed to send movement notification: %s", e, exc_info=True)
