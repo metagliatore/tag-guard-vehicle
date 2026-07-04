@@ -72,3 +72,57 @@ def test_extract_coords_from_new_payload_shape():
     assert float(lat) == 45.1234567
     assert float(lon) == 9.1234567
 
+
+def test_parse_connection_state_network_only_tag_is_disconnected():
+    """Tag seen only by the network (no nearby, no d2d) must be disconnected."""
+    attrs = {
+        "latitude": 45.1234000,
+        "longitude": 9.1234000,
+        "location_found": True,
+        "update_success": True,
+        "raw_item": {
+            "resultCode": "200",
+            "geolocations": [
+                {
+                    "latitude": "45.1234000",
+                    "longitude": "9.1234000",
+                    "method": "wifi",
+                    "accuracy": "100.0",
+                    "battery": "FULL",
+                    "lastUpdateTime": 1783170442523,
+                    "valid": True,
+                }
+            ],
+        },
+    }
+    connected, _ = utils.parse_connection_state_by_model("pixelshober_ha_smartthings_find", [], attrs)
+    assert connected is False
+
+
+def test_parse_connection_state_nearby_phone_tag_is_connected():
+    """Tag with nearby=True + gattConnected must be connected."""
+    attrs = {
+        "latitude": 45.1234568,
+        "longitude": 9.1234568,
+        "location_found": True,
+        "update_success": True,
+        "raw_item": {
+            "resultCode": "200",
+            "geolocations": [
+                {
+                    "nearby": True,
+                    "d2dStatus": "gattConnected",
+                    "latitude": "45.1234568",
+                    "longitude": "9.1234568",
+                    "method": "fused",
+                    "accuracy": "14.003",
+                    "battery": "FULL",
+                    "lastUpdateTime": 1783173310335,
+                    "valid": True,
+                }
+            ],
+        },
+    }
+    connected, _ = utils.parse_connection_state_by_model("pixelshober_ha_smartthings_find", [], attrs)
+    assert connected is True
+

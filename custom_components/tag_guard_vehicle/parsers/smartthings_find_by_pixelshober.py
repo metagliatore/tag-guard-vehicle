@@ -29,17 +29,22 @@ def parse_connection_state(ops, attrs):
 
     geolocation = _first_geolocation(attrs)
     d2d_status = str(geolocation.get("d2dStatus") or "").strip().lower()
+    nearby = geolocation.get("nearby")
 
-    if d2d_status in {"gattconnected", "connected"}:
+    # PixelShober/HA-SmartThings-Find semantics:
+    # - nearby=True + d2dStatus=gattConnected/connected  => tag is connected to this phone
+    # - nearby missing/false or d2dStatus missing/not connected => tag is seen only by the network
+    if nearby is True and d2d_status in {"gattconnected", "connected"}:
         connected = True
-    elif d2d_status in {"gattdisconnected", "disconnected"}:
+    elif nearby is False or d2d_status in {"gattdisconnected", "disconnected"}:
         connected = False
+    elif nearby is True:
+        # nearby=True but no explicit d2d status: assume connected to this phone
+        connected = True
     else:
-        nearby = geolocation.get("nearby")
-        if nearby is not None:
-            connected = bool(nearby)
-        else:
-            connected = bool(attrs.get("location_found") and attrs.get("update_success"))
+        # No nearby info at all: we cannot assume direct connection; default to disconnected
+        # so that connection-mode sentinel activates when the tag leaves the phone's range.
+        connected = False
 
     # keep a shape compatible with the rest of integration logging/metadata handling
     last_op = {
