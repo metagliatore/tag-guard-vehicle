@@ -1148,8 +1148,6 @@ class VehicleCoordinator:
             except Exception:
                 self.saved_last_seen = None
 
-        self.position_notified = False
-        
         # Activate alarm when position is saved due to automatic triggers
         # - "stationary": position/combined mode detected vehicle stationary
         # - "disconnect": connection/combined mode detected tag disconnect
@@ -1158,15 +1156,22 @@ class VehicleCoordinator:
         if reason in ("stationary", "disconnect") and not self.alarm_active:
             self.alarm_active = True
             _LOGGER.info("Alarm activated automatically (reason=%s, mode=%s)", reason, self.activation_mode)
-        
+
+        # Reset position_notified only when the alarm was previously inactive and is
+        # now becoming active. If the alarm is already active (e.g. position mode
+        # already armed) we must keep position_notified as-is so that repeated
+        # stationary checks do not re-send the activation notification.
+        if not previous_alarm and self.alarm_active:
+            self.position_notified = False
+
         await self.async_save()
-        _LOGGER.info("Saved parking position: %s,%s (reason=%s, gpsUtcDt=%s, alarm_active=%s->%s)", 
+        _LOGGER.info("Saved parking position: %s,%s (reason=%s, gpsUtcDt=%s, alarm_active=%s->%s)",
                      self.saved_latitude, self.saved_longitude, reason, self.saved_gpsUtcDt, previous_alarm, self.alarm_active)
-        
+
         # If this is a start-related save, clear the awaiting flag
         if reason == "start":
             self._awaiting_activation_save = False
-        
+
         # Notify UI immediately to update state
         try:
             from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -1174,25 +1179,25 @@ class VehicleCoordinator:
         except (AttributeError, KeyError, ImportError):
             # hass.data not available (e.g., in unit tests with FakeHass)
             pass
-        
+
         # Send notification based on reason
         # Send for "save", "start", and "disconnect" (connection mode auto-activation)
-        # Do NOT send for "stationary" (would be too noisy)
+        # Do NOT send for "stationary" if the alarm was already active (would be too noisy)
         if self.notifier and reason in ("save", "start", "disconnect", "stationary"):
             try:
                 from .utils import translate
-                
+
                 map_url = f"https://maps.google.com/?q={lat},{lon}"
-                
+
                 # Get vehicle name for multi-instance identification
                 vehicle_name = self.get_vehicle_name()
-                
+
                 # Build message based on reason using translations
                 if reason in ("start", "disconnect", "stationary"):
                     # start, disconnect, and stationary all activate monitoring
                     title = await translate(self.hass, "messages.monitoring_activated_title", "🟢 Monitoring activated")
                     title = f"{title} [{vehicle_name}]"
-                    
+
                     # Get mode name for display
                     mode_names = {
                         "manual": "Manual",
@@ -1201,24 +1206,24 @@ class VehicleCoordinator:
                         "connection": "Connection"
                     }
                     mode_display = mode_names.get(self.activation_mode, self.activation_mode.capitalize())
-                    
+
                     # Different message based on trigger reason
                     if reason == "disconnect":
                         message_template = await translate(
-                            self.hass, 
-                            "messages.connection_mode_disconnect", 
+                            self.hass,
+                            "messages.connection_mode_disconnect",
                             "Tag disconnected. Alarm activated.\nMode: {mode}\n📍 {map_url}"
                         )
                     elif reason == "stationary":
                         message_template = await translate(
-                            self.hass, 
-                            "messages.position_mode_stationary", 
+                            self.hass,
+                            "messages.position_mode_stationary",
                             "Position stable. Alarm activated.\nMode: {mode}\n📍 {map_url}"
                         )
                     else:  # reason == "start"
                         message_template = await translate(
-                            self.hass, 
-                            "messages.monitoring_activated_message", 
+                            self.hass,
+                            "messages.monitoring_activated_message",
                             "Alarm active. Monitoring current position.\nMode: {mode}\n📍 {map_url}"
                         )
                     message = message_template.format(mode=mode_display, map_url=map_url)
@@ -1231,11 +1236,17 @@ class VehicleCoordinator:
                         "Parking position saved.\n📍 {map_url}"
                     )
                     message = message_template.format(map_url=map_url)
-                
-                _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
-                await self._async_send_notification(title, message, map_url=map_url)
-                _LOGGER.info("Sent '%s' notification", reason)
-                    
+
+                # Avoid duplicate activation notifications: only send when the alarm
+                # transitions from inactive to active. If already active, the user has
+                # already been notified and only movement notifications should follow.
+                if reason == "stationary" and previous_alarm:
+                    _LOGGER.debug("Skipping '%s' activation notification: alarm already active", reason)
+                else:
+                    _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
+                    await self._async_send_notification(title, message, map_url=map_url)
+                    _LOGGER.info("Sent '%s' notification", reason)
+
             except Exception as e:
                 _LOGGER.warning("Failed to send notification: %s", e, exc_info=True)
 
