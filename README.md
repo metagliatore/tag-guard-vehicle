@@ -8,7 +8,7 @@ Home Assistant integration to monitor and protect your vehicle using a Bluetooth
 
 1. **🅿️ Automatic Position Saving** - When you park your vehicle, the integration automatically saves the GPS coordinates from your Bluetooth tracker
 2. **🔐 Guard Activation** - After saving the position, monitoring is automatically activated (or manually, depending on your configuration)
-3. **📍 Always Know Where You Parked** - The parking location is saved in the sensor attributes, so you can always find your vehicle
+3. **� Always Know Where You Parked** - The parking location is saved in the sensor, so you can always find your vehicle
 4. **🚨 Theft/Movement Detection** - If your vehicle moves beyond the configured radius (default 200m), you receive an immediate notification
 5. **💾 Persistent Storage** - Your parking location is saved across Home Assistant restarts
 
@@ -39,7 +39,7 @@ Currently, the integration supports **Samsung SmartTag 2** devices connected via
 
 You need one of these integrations installed to provide the `device_tracker` entity for your SmartTag.
 
-**Note:** Support for other Bluetooth trackers (AirTag, Tile, etc.) may be added in future releases.
+**Note:** Support for other Bluetooth trackers (AirTag, Google, Tile, etc.) may be added in future releases.
 
 ## Installation
 
@@ -72,6 +72,57 @@ You need one of these integrations installed to provide the `device_tracker` ent
   - 🔄 **Auto-reset on stop** - Position tracking resets when alarm is deactivated for fresh monitoring
 - **`combined`** - ❇️ **Automatic/smart mode** — arms at the FIRST event between disconnect (like connection) OR position stable (like position). Disarms on reconnect. Covers: walk away with phone, leave phone at home, lend vehicle to someone else. Recommended for most users.
 - **`manual`** - Only activates via service call or webhook
+
+### Activation Flow Diagrams
+
+#### Position Mode (stable position triggers alarm)
+
+```mermaid
+flowchart LR
+    A[GPS Event] --> B{Within tolerance?}
+    B -->|Yes| C[Increment counter<br>Timer continues]
+    B -->|No| D[Reset counter<br>New timer starts]
+    C --> E[Timer expires]
+    D --> E
+    E --> F{Counter >=<br>stationary_count?}
+    F -->|Yes| G[Save position<br>Activate alarm 🔐]
+    F -->|No| H[Skip save<br>Wait for more reports]
+```
+
+#### Connection Mode (disconnect triggers alarm)
+
+```mermaid
+flowchart LR
+    A[Tag Event] --> B{State changed?}
+    B -->|Disconnect| C[Save position<br>Activate alarm 🔐]
+    B -->|Reconnect| D[Disarm alarm 🔓]
+    B -->|No change| E[Nothing]
+```
+
+#### Combined Mode (OR logic — first event wins)
+
+```mermaid
+flowchart TD
+    subgraph "Combined Mode — OR Logic"
+        A[Tag/GPS Event] --> B{Disconnect?}
+        B -->|Yes| C[Save position<br>Activate alarm 🔐<br>Cancel timer]
+        B -->|No| D{Position stable?}
+        D -->|Yes| E[Save position<br>Activate alarm 🔐]
+        D -->|No| F[Track position<br>Run timer]
+    end
+    subgraph "Disarm"
+        G[Reconnect] --> H[Disarm alarm 🔓]
+    end
+```
+
+#### Mode Comparison
+
+| Mode | Arms on disconnect | Arms on position stable | Disarms on reconnect | Best for |
+|------|:---:|:---:|:---:|---------|
+| `connection` | ✅ | ❌ | ✅ | Immediate detection, phone always with you |
+| `position` | ❌ | ✅ | ❌ | Phone left at home, GPS reliability |
+| `combined` | ✅ | ✅ | ✅ | General use, covers all scenarios |
+| `manual` | ❌ | ❌ | ❌ | Manual control only |
 
 ## Usage
 
@@ -330,11 +381,13 @@ Or via integration options: **Configure** → **Enable debug mode**
 | Option | Description | Default |
 |--------|-------------|---------|
 | `device_tracker` | Your Bluetooth tracker entity | Required |
-| `activation_mode` | When to activate: `connection`, `position`, `combined`, `manual` | `combined` |
+| `activation_mode` | When to activate: `connection`, `position`, `combined`, `manual` | `manual` |
 | `notifier` | Home Assistant notify service | `notify.notify` |
-| `tolerance_radius_m` | Alert distance in meters | `200` |
-| `stationary_minutes` | Minutes stable before activation (position/combined modes) | `3` |
-| `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `2` |
+| `tolerance_radius` | Alert distance in meters | `200` |
+| `stationary_minutes` | Minutes stable before activation (position/combined modes) | `10` |
+| `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `3` |
+| `tag_model` | Bluetooth tag parser model | `vedeneb_ha_smartthings_find` |
+| `webhook_token` | Custom webhook token (auto-generated if empty) | Auto-generated |
 | `debug_mode` | Enable verbose logging | `false` |
 
 **Position Mode Notes:**
