@@ -310,24 +310,6 @@ async def async_build_notify_message(hass, lat: float, lon: float, saved_lat: fl
     return title, message
 
 
-def should_finalize_combined(activation_mode: str, new_tag_state: str, stationary_counter: int, stationary_count: int) -> bool:
-    """Return True if, under 'combined' activation, a disconnect should finalize save.
-
-    For combined mode both a disconnect and sufficient stationary reports are required.
-    """
-    # Treat missing/None activation_mode as legacy 'connection' behaviour so
-    # older installations that do not set the option still finalize on disconnect.
-    mode = str(activation_mode) if activation_mode else "connection"
-    # Only connection or combined modes may finalize on a disconnect.
-    if mode not in ("connection", "combined"):
-        return False
-    # If activation is 'connection' we finalize on disconnect regardless of stationary counter.
-    if mode == "connection":
-        return new_tag_state == "disconnected"
-    # for combined, require disconnect and at least stationary_count
-    return new_tag_state == "disconnected" and int(stationary_counter) >= int(stationary_count)
-
-
 def format_map_url(lat: float, lon: float) -> str:
     """Return a Google Maps URL for the coordinates."""
     return f"https://maps.google.com/?q={lat},{lon}"

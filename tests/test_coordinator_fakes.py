@@ -126,9 +126,8 @@ async def test_movement_triggers_notify(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
-# Combined mode requires stationary criteria before a disconnect triggers save
-async def test_combined_requires_stationary_then_disconnect(monkeypatch):
+# Combined mode OR logic: disconnect alone triggers alarm+save immediately
+async def test_combined_disconnect_triggers_immediately(monkeypatch):
     hass = FakeHass()
     coord = VehicleCoordinator(hass, "e3", {})
     coord.store = DummyStore()
@@ -165,3 +164,38 @@ async def test_combined_requires_stationary_then_disconnect(monkeypatch):
     # saved position should be set after combined criteria (persisted in store)
     assert coord.store._data["saved_latitude"] == 45.0
     assert coord.store._data["saved_longitude"] == 9.0
+
+
+@pytest.mark.asyncio
+# Combined mode OR logic: position becoming stationary also triggers alarm+save
+async def test_combined_stationary_triggers_alarm(monkeypatch):
+    """Test that combined mode arms via stationary detection (the other OR branch)."""
+    hass = FakeHass()
+    coord = VehicleCoordinator(hass, "e4", {})
+    coord.store = DummyStore()
+    coord.notifier = None
+    coord.activation_mode = "combined"
+    coord.stationary_count = 0  # immediate alarm mode
+    # patch async_call_later to call the callback immediately
+    def fake_call_later(hass_arg, seconds, callback):
+        import asyncio
+        asyncio.create_task(callback(None))
+        return lambda: None
+
+    monkeypatch.setattr("custom_components.tag_guard_vehicle.coordinator.async_call_later", fake_call_later)
+
+    # ensure device tracker configured so stationary_check can read current state
+    coord.config["device_tracker"] = "device.tracker_1"
+    hass.states._dict["device.tracker_1"] = FakeState({"latitude": 45.0, "longitude": 9.0})
+
+    # simulate a GPS event (no disconnect) - should trigger stationary detection
+    s1 = FakeState({"latitude": 45.0, "longitude": 9.0})
+    ev1 = DummyEvent("device.tracker_1", s1)
+    await coord._handle_device_event(ev1)
+
+    # Timer fires immediately (fake_call_later), _stationary_check runs
+    # and should save position + activate alarm
+    await asyncio.sleep(0.05)
+    assert coord.alarm_active is True, "Alarm should be activated by stationary detection"
+    assert coord.saved_latitude == 45.0
+    assert coord.saved_longitude == 9.0

@@ -25,10 +25,6 @@ from .utils import (
     safe_get,
     haversine_distance,
     update_stationary_counter,
-    parse_connection_state,
-    extract_coords_from_ops_attrs,
-    build_notify_message,
-    should_finalize_combined,
     format_map_url,
     normalize_notification_action,
 )
@@ -78,7 +74,10 @@ class VehicleCoordinator:
         # - Manual: user activates explicitly
         # - Connection: alarm activates automatically on disconnect event
         # - Position: alarm activates when vehicle becomes stationary
-        # - Combined: alarm activates when both stationary AND disconnected
+        # - Combined: OR logic — alarm activates on disconnect (like connection)
+        #   OR when position becomes stationary (like position), whichever comes first.
+        #   Disarms on reconnect. Covers: walk away with phone, leave phone at home,
+        #   lend vehicle to someone else, vehicle returns home.
         try:
             self.alarm_active = False
         except Exception:
@@ -251,7 +250,8 @@ class VehicleCoordinator:
             # - Manual: user must explicitly activate via start command
             # - Connection: waits for disconnect event to activate
             # - Position: activates when vehicle becomes stationary
-            # - Combined: activates when both stationary AND disconnected
+            # - Combined: activates on disconnect (like connection) OR when position
+            #   becomes stationary (like position) — whichever comes first
             # This ensures consistent behavior across all modes and avoids confusion
             # about whether the alarm is actually monitoring or not at startup.
             self.alarm_active = False
@@ -569,60 +569,50 @@ class VehicleCoordinator:
             self.last_tag_state = new_tag_state
             await self.async_save()
 
-            # Connection mode: manage alarm based on connection state
-            # disconnect → alarm ON + save position from event
-            # connect → alarm OFF
-            if self.activation_mode == "connection":
+            # Combined OR logic: behave like connection mode (arm on disconnect, disarm on reconnect)
+            # Combined also runs stationary detection (shared with position mode below),
+            # so whoever happens first - disconnect OR stable position - arms the alarm.
+            # Treat None/empty activation_mode as "connection" for backward compatibility.
+            mode_to_check = self.activation_mode or "connection"
+            if mode_to_check in ("connection", "combined"):
                 if new_tag_state == "disconnected":
-                    # Activate alarm and save position from event
-                    previous_alarm = self.alarm_active
-                    self.alarm_active = True
-                    
-                    # Reset awaiting flag and position_notified (like set_alarm_active does)
-                    self._awaiting_activation_save = False
-                    self.position_notified = False
-                    
-                    await self.async_save()
-                    _LOGGER.info("Connection mode: Alarm activated on disconnect (was: %s) (entry_id=%s)", 
-                                previous_alarm, self.entry_id)
-                    
-                    # Save position from event coordinates
+                    # Save position from event coordinates (always, even if alarm already active)
                     from .utils import extract_coords_from_ops_attrs_by_model
                     lat, lon = extract_coords_from_ops_attrs_by_model(tag_model, last_op, attrs)
+                    
+                    # Cancel any pending stationary timer - disconnect is a definitive signal
+                    if self._stationary_handle:
+                        _LOGGER.info("%s mode: Cancelling stationary timer (disconnect triggered)", mode_to_check.upper())
+                        self._stationary_handle()
+                        self._stationary_handle = None
+                    
+                    if not self.alarm_active:
+                        # Reset awaiting flag and position_notified (like set_alarm_active does)
+                        self._awaiting_activation_save = False
+                        self.position_notified = False
+                        
+                        _LOGGER.info("%s mode: Alarm activated on disconnect (entry_id=%s)", 
+                                    mode_to_check.upper(), self.entry_id)
+                    
                     if lat is not None and lon is not None:
                         gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or attrs.get("gpsUtcDt")
                         locationType = safe_get(last_op, "extra", "locationType") or safe_get(last_op, "locationType") or attrs.get("locationType")
                         last_seen = attrs.get("last_seen")
                         await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=locationType, last_seen=last_seen, reason="disconnect")
-                        _LOGGER.info("Connection mode: Position saved on disconnect (entry_id=%s)", self.entry_id)
+                        _LOGGER.info("%s mode: Position saved on disconnect (entry_id=%s)", mode_to_check.upper(), self.entry_id)
                     else:
-                        _LOGGER.warning("Connection mode: Coordinates not available on disconnect (entry_id=%s)", self.entry_id)
+                        _LOGGER.warning("%s mode: Coordinates not available on disconnect (entry_id=%s)", mode_to_check.upper(), self.entry_id)
+                    
                         
                 elif new_tag_state == "connected":
-                    # Deactivate alarm (like manual stop)
-                    await self.set_alarm_active(False)
-                    _LOGGER.info("Connection mode: Alarm deactivated on connect (entry_id=%s)", self.entry_id)
+                    # Only disarm if alarm is active AND we're in connection/combined mode
+                    # (position mode doesn't disarm on reconnect)
+                    if self.alarm_active:
+                        await self.set_alarm_active(False)
+                        _LOGGER.info("%s mode: Alarm deactivated on connect (entry_id=%s)", mode_to_check.upper(), self.entry_id)
 
-            # if disconnected -> interpret as parked and save position if available
-            # decide if disconnect should finalize save (handles combined mode)
-            # NOTE: Connection mode is already handled above via set_alarm_active(), skip here
-            if str(self.activation_mode) != "connection" and should_finalize_combined(self.activation_mode, new_tag_state, self._stationary_counter, self.stationary_count):
-                from .utils import extract_coords_from_ops_attrs_by_model
-
-                lat, lon = extract_coords_from_ops_attrs_by_model(tag_model, last_op, attrs)
-                # try to pass gps timestamp and meta if available
-                gpsUtcDt = safe_get(last_op, "extra", "gpsUtcDt") or safe_get(last_op, "gpsUtcDt") or attrs.get("gpsUtcDt")
-                locationType = safe_get(last_op, "extra", "locationType") or safe_get(last_op, "locationType") or attrs.get("locationType")
-                last_seen = attrs.get("last_seen")
-                if lat is not None and lon is not None:
-                    await self._async_save_position(lat, lon, gpsUtcDt=gpsUtcDt, locationType=locationType, last_seen=last_seen, reason="disconnect")
-                else:
-                    # nothing to save now; if we recently enabled and are awaiting
-                    # a fresh GPS reading, keep awaiting flag set so that later
-                    # device events can trigger the save
-                    if getattr(self, "_awaiting_activation_save", False):
-                        # remain awaiting; nothing to do here
-                        pass
+            # For legacy combined mode (pre-OR logic): this block is no longer needed
+            # because combined now arms on disconnect directly (like connection mode).
 
         # If activation mode is 'position' we'll handle movement via saved pos comparisons
         # Save latest coordinates for stationary detection
@@ -1240,7 +1230,7 @@ class VehicleCoordinator:
                 # Avoid duplicate activation notifications: only send when the alarm
                 # transitions from inactive to active. If already active, the user has
                 # already been notified and only movement notifications should follow.
-                if reason == "stationary" and previous_alarm:
+                if reason in ("stationary", "disconnect") and previous_alarm:
                     _LOGGER.debug("Skipping '%s' activation notification: alarm already active", reason)
                 else:
                     _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
@@ -1438,7 +1428,7 @@ class VehicleCoordinator:
             # In 'position' mode optionally require stationary_count threshold
             _LOGGER.info("Step 6: activation_mode=%s, stationary_count=%d, counter=%d", 
                         self.activation_mode, int(getattr(self, "stationary_count", 0)), int(getattr(self, "_stationary_counter", 0)))
-            if self.activation_mode == "position" and int(getattr(self, "stationary_count", 0)) > 0:
+            if self.activation_mode in ("position", "combined") and int(getattr(self, "stationary_count", 0)) > 0:
                 if int(getattr(self, "_stationary_counter", 0)) < int(self.stationary_count):
                     # not enough repeated reports yet
                     _LOGGER.info("WARNING: Stationary counter %d below required %d, skipping save", 

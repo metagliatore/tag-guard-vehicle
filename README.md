@@ -70,7 +70,7 @@ You need one of these integrations installed to provide the `device_tracker` ent
   - 🎯 **Smart GPS baseline detection** - First GPS timestamp saved as reference, counter increments only with fresh updates
   - ⚡ **Optimized processing** - Skips duplicate GPS updates to reduce log spam and improve efficiency
   - 🔄 **Auto-reset on stop** - Position tracking resets when alarm is deactivated for fresh monitoring
-- **`combined`** - Requires both disconnect AND stable position (recommended)
+- **`combined`** - ❇️ **Automatic/smart mode** — arms at the FIRST event between disconnect (like connection) OR position stable (like position). Disarms on reconnect. Covers: walk away with phone, leave phone at home, lend vehicle to someone else. Recommended for most users.
 - **`manual`** - Only activates via service call or webhook
 
 ## Usage
