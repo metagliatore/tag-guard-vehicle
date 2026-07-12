@@ -18,8 +18,8 @@ DEFAULT_WEBHOOK_ID = "vehicle-save-location"
 
 # Tag models
 TAG_MODELS = {
-    "vedeneb_ha_smartthings_find": "Vedeneb/HA-SmartThings-Find",
-    "pixelshober_ha_smartthings_find": "SmartThings-Find by PixelShober",
+    "vedeneb_ha_smartthings_find": "Samsung SmartTag2 (Vedeneb/HA-SmartThings-Find)",
+    "pixelshober_ha_smartthings_find": "Samsung SmartTag2 (PixelShober)",
 }
 
 # Note: keys in TAG_MODELS are intended to match parser registry keys in

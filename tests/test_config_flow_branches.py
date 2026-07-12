@@ -49,29 +49,6 @@ class FakeHass:
 
 
 @pytest.mark.asyncio
-async def test_async_step_user_token_in_use_sets_error():
-    flow = TagGuardVehicleConfigFlow()
-    flow.hass = FakeHass(entries=[FakeEntry("entry1", token="dup")])
-
-    user_input = {
-        CONF_DEVICE_TRACKER: "device_tracker.smarttag",
-        CONF_PERSON_ENTITY: "person.test",
-        CONF_NOTIFIER: "mobile_app_phone",
-        CONF_TOLERANCE_RADIUS: 200,
-        CONF_ACTIVATION_MODE: "manual",
-        "webhook_token": "dup",
-        "tag_model": "samsung_smarttag2",
-        "debug_mode": False,
-    }
-
-    result = await flow.async_step_user(user_input)
-
-    # Current flow behavior with validation errors: no transition object is returned,
-    # but the branch is executed and warning is logged.
-    assert result is None
-
-
-@pytest.mark.asyncio
 async def test_async_step_user_debug_stub_parsing_branch(monkeypatch):
     flow = TagGuardVehicleConfigFlow()
     hass = FakeHass()

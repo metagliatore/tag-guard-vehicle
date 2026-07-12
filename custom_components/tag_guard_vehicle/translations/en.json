@@ -1,13 +1,45 @@
 {
   "config": {
     "step": {
+      "user": {
+        "title": "Vehicle Tracker",
+        "description": "Configure your Bluetooth tag to monitor your vehicle.",
+        "data": {
+          "device_tracker": "Device Tracker",
+          "tag_model": "Tag Model / Parser",
+          "activation_mode": "Activation Mode",
+          "notifier": "Notification Service",
+          "tolerance_radius": "Tolerance Radius",
+          "debug_mode": "Debug Mode"
+        },
+        "data_description": {
+          "device_tracker": "📍 The device_tracker entity for your Bluetooth tag (e.g. device_tracker.smarttag_scooter).",
+          "tag_model": "🏷️ Select the SmartThings Find integration you use. Default works for most setups.",
+          "activation_mode": "⚙️ 'combined' (recommended) — arms on disconnect OR stable position. 'position' — arms when GPS is stable. 'connection' — arms on Bluetooth disconnect. 'manual' — you control via buttons.",
+          "notifier": "🔔 Service to use for alerts (e.g. notify.mobile_app).",
+          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 200).",
+          "debug_mode": "🐛 Enable detailed logging for troubleshooting."
+        }
+      },
+      "stationary": {
+        "title": "Stationary Detection",
+        "description": "Configure how long the vehicle must remain stationary before the alarm activates.",
+        "data": {
+          "stationary_minutes": "Time (minutes)",
+          "stationary_count": "Count (samples)"
+        },
+        "data_description": {
+          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 10.",
+          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 3."
+        }
+      },
       "show_token": {
         "description": "🔗 **Your webhook is ready!**\n\nCopy the URL below and configure it in your automation app.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 **Full Webhook URL:**\n`{webhook_url}`\n\n🔑 **Token only:** `{webhook_token}`\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nThis URL allows your Bluetooth tag to control this integration.\n\n**Click 'Submit' to complete the setup.**"
       }
     },
     "error": {
-      "webhook_token_in_use": "This webhook token is already in use by another instance. Please use a different token.",
-      "webhook_url_readonly": "The webhook URL is read-only and cannot be modified. Please click Submit to continue."
+      "webhook_token_in_use": "This webhook token is already in use by another instance.",
+      "webhook_url_readonly": "The webhook URL is read-only."
     }
   },
   "entity": {
@@ -26,9 +58,9 @@
   "component": {
     "messages": {
       "moved_title": "🚨 Vehicle moved!",
-      "moved_message": "⚠️ Detected movement of {distance}m from saved position!\n\n📍 Saved position:\n{saved_url}\n\n📍 Current position:\n{current_url}",
+      "moved_message": "⚠️ Movement of {distance}m from saved position!\n\n📍 Saved: {saved_url}\n📍 Current: {current_url}",
       "monitoring_activated_title": "🟢 Monitoring activated",
-      "monitoring_activated_message": "Alarm active. Monitoring current position.\nMode: {mode}\n📍 {map_url}",
+      "monitoring_activated_message": "Alarm active.\nMode: {mode}\n📍 {map_url}",
       "connection_mode_disconnect": "Tag disconnected. Alarm activated.\nMode: {mode}\n📍 {map_url}",
       "position_mode_stationary": "Position stable. Alarm activated.\nMode: {mode}\n📍 {map_url}",
       "position_saved_title": "📍 Position saved",
@@ -37,13 +69,6 @@
       "vehicle_tracker_title": "Vehicle Tracker",
       "open_map_title": "Open map",
       "saved_position_title": "📍 Saved parking position",
-  "device_tracker_help": "Select the device_tracker used to detect the vehicle's location (example: device_tracker.my_phone).",
-  "person_help": "Person associated with the vehicle (used for notifications), e.g. person.john.",
-  "notifier_help": "Select the notify service to use (e.g. mobile_app_your_phone, telegram).",
-  "tolerance_help": "Tolerance radius in meters used to detect movement vs. small GPS variation (example: 200).",
-  "activation_mode_help": "Choose activation mode: 'connection' (save on disconnect), 'position' (save after stable location), 'combined' (both), 'manual' (manual saves).",
-  "tag_model_help": "Bluetooth tag model – some models report coordinates differently (e.g. Samsung SmartTag, Tile).",
-  "webhook_help": "Optional: enter a custom webhook token (e.g. my-token-123), or leave empty to have one generated.",
       "control_title": "Tag Guard Vehicle — Control",
       "control_description": "Use the buttons to start/stop the guard or trigger a save.",
       "start_button": "Start (enable)",
@@ -57,8 +82,20 @@
       "alarm_label": "alarm",
       "tracker_label": "Tracker",
       "entity_not_found": "Entity {entity} not found",
-      "debug_help": "Enable verbose debug logs (useful for troubleshooting).",
-      "stationary_help": "Position mode activates when vehicle remains stationary for the configured time. Time: how many minutes the position must remain stable. Count: how many GPS samples must be received (0 = bypass counter check, use time only). Example: 10 minutes + 3 samples = activate after 10 minutes with at least 3 stable GPS readings."
+      "debug_help": "Enable verbose debug logs.",
+      "stationary_help": "Position mode activates when vehicle remains stationary for the configured time.",
+      "manual_trigger_awaiting_title": "⏳ Guard activating...",
+      "manual_trigger_awaiting_message": "Waiting for fresh GPS.",
+      "save_awaiting_title": "⏳ Waiting for fresh GPS...",
+      "save_awaiting_message": "Monitoring for fresh GPS to save position.",
+      "webhook_start_ok": "✅ Guard activated. Position saved.",
+      "webhook_stop_ok": "✅ Guard stopped.",
+      "webhook_save_ok": "✅ Position saved.",
+      "webhook_muted": "🔇 Notifications muted — alarm still monitoring.",
+      "webhook_unmuted": "🔔 Notifications unmuted.",
+      "webhook_no_action": "No action specified. Use action=start|stop|save|mute|unmute.",
+      "notify_waiting_title": "⏳ Waiting for fresh GPS...",
+      "notify_waiting_message": "Vehicle guard is waiting for fresh GPS data."
     }
   }
 }

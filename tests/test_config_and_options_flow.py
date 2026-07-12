@@ -1,7 +1,6 @@
 import pytest
 
-from custom_components.tag_guard_vehicle.config_flow import is_webhook_token_in_use as cfg_token_in_use
-from custom_components.tag_guard_vehicle.options_flow import is_webhook_token_in_use as opt_token_in_use
+from custom_components.tag_guard_vehicle.utils import is_webhook_token_in_use
 
 
 class FakeEntry:
@@ -27,24 +26,24 @@ class FakeHass:
 def test_config_flow_webhook_token_in_use_true():
 	entry = FakeEntry("entry_1", options={"webhook_token": "token-a"})
 	hass = FakeHass([entry])
-	assert cfg_token_in_use(hass, "token-a") is True
+	assert is_webhook_token_in_use(hass, "token-a") is True
 
 
 def test_config_flow_webhook_token_in_use_excluding_entry():
 	entry = FakeEntry("entry_1", options={"webhook_token": "token-a"})
 	hass = FakeHass([entry])
-	assert cfg_token_in_use(hass, "token-a", exclude_entry_id="entry_1") is False
+	assert is_webhook_token_in_use(hass, "token-a", exclude_entry_id="entry_1") is False
 
 
 def test_options_flow_webhook_token_in_use_true():
 	entry = FakeEntry("entry_1", data={"webhook_token": "token-b"})
 	hass = FakeHass([entry])
-	assert opt_token_in_use(hass, "token-b") is True
+	assert is_webhook_token_in_use(hass, "token-b") is True
 
 
 def test_options_flow_webhook_token_in_use_empty_token():
 	hass = FakeHass([])
-	assert opt_token_in_use(hass, "") is False
+	assert is_webhook_token_in_use(hass, "") is False
 
 """Focused tests for config/options flow helpers and branching."""
 
@@ -52,11 +51,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from custom_components.tag_guard_vehicle.config_flow import is_webhook_token_in_use as cfg_token_in_use
 from custom_components.tag_guard_vehicle.options_flow import (
 	TagGuardVehicleOptionsFlowHandler,
-	is_webhook_token_in_use as opt_token_in_use,
 )
+from custom_components.tag_guard_vehicle.utils import is_webhook_token_in_use
 
 
 def _fake_entry(entry_id: str, data_token: str | None = None, options_token: str | None = None):
@@ -74,9 +72,9 @@ def test_config_flow_token_uniqueness_detects_collision():
 	]
 	hass = SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda _domain: entries))
 
-	assert cfg_token_in_use(hass, "token-a") is True
-	assert cfg_token_in_use(hass, "token-b") is True
-	assert cfg_token_in_use(hass, "new-token") is False
+	assert is_webhook_token_in_use(hass, "token-a") is True
+	assert is_webhook_token_in_use(hass, "token-b") is True
+	assert is_webhook_token_in_use(hass, "new-token") is False
 
 
 def test_options_flow_token_uniqueness_excludes_current_entry():
@@ -86,8 +84,8 @@ def test_options_flow_token_uniqueness_excludes_current_entry():
 	]
 	hass = SimpleNamespace(config_entries=SimpleNamespace(async_entries=lambda _domain: entries))
 
-	assert opt_token_in_use(hass, "token-same", exclude_entry_id="same") is False
-	assert opt_token_in_use(hass, "token-other", exclude_entry_id="same") is True
+	assert is_webhook_token_in_use(hass, "token-same", exclude_entry_id="same") is False
+	assert is_webhook_token_in_use(hass, "token-other", exclude_entry_id="same") is True
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,23 @@ from .const import (
     CONF_STATIONARY_MINUTES,
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
+    CONF_WEBHOOK_TOKEN,
+    DOMAIN,
 )
+
+def is_webhook_token_in_use(hass, token: str, exclude_entry_id: str = None) -> bool:
+    """Check if a webhook token is already in use by another config entry."""
+    if not token:
+        return False
+    entries = hass.config_entries.async_entries(DOMAIN)
+    for entry in entries:
+        if exclude_entry_id and entry.entry_id == exclude_entry_id:
+            continue
+        existing_token = entry.options.get(CONF_WEBHOOK_TOKEN) or entry.data.get(CONF_WEBHOOK_TOKEN)
+        if existing_token == token:
+            return True
+    return False
+
 
 def meters_to_degrees(meters: float) -> float:
     """Convert meters to degrees roughly (1 deg lat ~ 111km)."""
