@@ -97,6 +97,15 @@ class VehicleCoordinator:
         self._stationary_candidate = None  # tuple(lat, lon)
         self._stationary_start_utc = None
         self._stationary_candidate_gpsUtcDt = None
+        # Cooldown: remember the last position/coords that triggered an activation
+        # notification to suppress duplicate "parking detected" spam when the tag
+        # flaps (reconnect→disconnect) without the vehicle actually moving.
+        self._last_activation_notified_lat: float | None = None
+        self._last_activation_notified_lon: float | None = None
+        self._last_activation_notified_ts: float | None = None
+        # Cooldown window in seconds (default 1800 = 30 min): if the same position
+        # is re-armed within this window, do NOT send a new notification.
+        self._activation_notify_cooldown_seconds = 1800
 
     def _debug_notify(self, message: str) -> None:
         """Send debug message to logger."""
@@ -586,9 +595,12 @@ class VehicleCoordinator:
                         self._stationary_handle()
                         self._stationary_handle = None
                     
+                    # Always clear awaiting flag on disconnect — the disconnect event itself
+                    # saves the position, so we don't need to await fresh GPS anymore.
+                    self._awaiting_activation_save = False
+                    
                     if not self.alarm_active:
-                        # Reset awaiting flag and position_notified (like set_alarm_active does)
-                        self._awaiting_activation_save = False
+                        # Reset position_notified (like set_alarm_active does)
                         self.position_notified = False
                         
                         _LOGGER.info("%s mode: Alarm activated on disconnect (entry_id=%s)", 
@@ -1158,8 +1170,10 @@ class VehicleCoordinator:
         _LOGGER.info("Saved parking position: %s,%s (reason=%s, gpsUtcDt=%s, alarm_active=%s->%s)",
                      self.saved_latitude, self.saved_longitude, reason, self.saved_gpsUtcDt, previous_alarm, self.alarm_active)
 
-        # If this is a start-related save, clear the awaiting flag
-        if reason == "start":
+        # Clear awaiting flag on ANY save that activates the alarm.
+        # This prevents the _awaiting_activation_save path from later re-saving
+        # with reason="start" and sending a duplicate notification.
+        if self.alarm_active and not previous_alarm:
             self._awaiting_activation_save = False
 
         # Notify UI immediately to update state
@@ -1227,15 +1241,41 @@ class VehicleCoordinator:
                     )
                     message = message_template.format(map_url=map_url)
 
-                # Avoid duplicate activation notifications: only send when the alarm
-                # transitions from inactive to active. If already active, the user has
-                # already been notified and only movement notifications should follow.
+                # Avoid duplicate activation notifications:
+                # 1. Only send when the alarm transitions from inactive to active.
+                # 2. Position cooldown: suppress notification if this same position
+                #    was already notified within the cooldown window. This prevents
+                #    spam when the tag flaps (reconnect→disconnect) without the
+                #    vehicle actually moving (e.g. user far from the vehicle).
                 if reason in ("stationary", "disconnect") and previous_alarm:
                     _LOGGER.debug("Skipping '%s' activation notification: alarm already active", reason)
                 else:
-                    _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
-                    await self._async_send_notification(title, message, map_url=map_url)
-                    _LOGGER.info("Sent '%s' notification", reason)
+                    import time
+                    now = time.time()
+                    within_cooldown = (
+                        self._last_activation_notified_ts is not None
+                        and self._last_activation_notified_lat is not None
+                        and self._last_activation_notified_lon is not None
+                        and (now - self._last_activation_notified_ts) < self._activation_notify_cooldown_seconds
+                        and haversine_distance(
+                            float(lat), float(lon),
+                            self._last_activation_notified_lat,
+                            self._last_activation_notified_lon,
+                        ) <= float(self.tolerance_radius)
+                    )
+                    if within_cooldown:
+                        _LOGGER.info(
+                            "Skipping '%s' notification: same position within cooldown (%.0fs), vehicle not moved",
+                            reason, self._activation_notify_cooldown_seconds
+                        )
+                    else:
+                        _LOGGER.debug("Sending notification: reason=%s, notifier=%s", reason, self.notifier)
+                        await self._async_send_notification(title, message, map_url=map_url)
+                        _LOGGER.info("Sent '%s' notification", reason)
+                        # Remember this position so we can deduplicate later re-arms
+                        self._last_activation_notified_lat = float(lat)
+                        self._last_activation_notified_lon = float(lon)
+                        self._last_activation_notified_ts = now
 
             except Exception as e:
                 _LOGGER.warning("Failed to send notification: %s", e, exc_info=True)
