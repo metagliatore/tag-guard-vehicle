@@ -34,8 +34,43 @@
         }
       },
       "show_token": {
-        "description": "\ud83d\udd17 **Il tuo webhook \u00e8 pronto!**\n\nCopia l'URL qui sotto e configuralo nella tua app di automazione.\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n\ud83d\udccb **URL Webhook completo:**\n`{webhook_url}`\n\n\ud83d\udd11 **Solo token:** `{webhook_token}`\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\nQuesto URL permette al tuo tag Bluetooth di controllare questa integrazione.\n\n**Clicca 'Invia' per completare la configurazione.**"
+        "description": "\ud83d\udd17 **Il tuo webhook \u00e8 pronto!**\n\nCopia l'URL qui sotto e configuralo nella tua app di automazione.\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n\ud83d\udccb **URL Webhook completo:**\n`{webhook_url}`\n\n\ud83d\udd11 **Solo token:** `{webhook_token}`\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nQuesto URL permette al tuo tag Bluetooth di controllare questa integrazione.\n\n**Clicca 'Invia' per completare la configurazione.**"
+      },
+      "reconfigure": {
+        "title": "Riconfigura tracker veicolo",
+        "description": "Aggiorna i parametri per il monitoraggio del veicolo.",
+        "data": {
+          "device_tracker": "Tracker del dispositivo",
+          "tag_model": "Modello tag / parser",
+          "activation_mode": "Modalit\u00e0 di attivazione",
+          "notifier": "Servizio notifiche",
+          "tolerance_radius": "Raggio di tolleranza",
+          "debug_mode": "Modalit\u00e0 debug"
+        },
+        "data_description": {
+          "device_tracker": "\ud83d\udccd Entit\u00e0 device_tracker per il tuo tag Bluetooth.",
+          "tag_model": "\ud83c\udff7\ufe0f Seleziona l'integrazione SmartThings Find che usi. Il default va bene per la maggior parte.",
+          "activation_mode": "\u2699\ufe0f 'combined' (consigliato) \u2014 si attiva su disconnessione O posizione stabile. 'position' \u2014 posizione stabile. 'connection' \u2014 disconnessione Bluetooth. 'manual' \u2014 controllo manuale.",
+          "notifier": "\ud83d\udd14 Servizio per gli avvisi (es. notify.mobile_app).",
+          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 200).",
+          "debug_mode": "\ud83d\udc1b Abilita log dettagliati per diagnostica."
+        }
+      },
+      "reconfigure_stationary": {
+        "title": "Rilevamento sosta",
+        "description": "Configura per quanto tempo il veicolo deve rimanere fermo prima di attivare l'allarme.",
+        "data": {
+          "stationary_minutes": "Tempo (minuti)",
+          "stationary_count": "Conteggio (campioni)"
+        },
+        "data_description": {
+          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 10.",
+          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 3."
+        }
       }
+    },
+    "abort": {
+      "reconfigure_successful": "Riconfigurazione completata con successo"
     },
     "error": {
       "webhook_token_in_use": "Questo token webhook \u00e8 gi\u00e0 in uso.",

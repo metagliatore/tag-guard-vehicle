@@ -263,3 +263,172 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({}),  # Empty schema = no input fields
             description_placeholders=placeholders,
         )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Handle reconfiguration initiated by the user."""
+        reconfigure_entry = (
+            self._get_reconfigure_entry()
+            if hasattr(self, "_get_reconfigure_entry")
+            else self.hass.config_entries.async_get_entry(self.context.get("entry_id"))
+        )
+        current = {
+            **(getattr(reconfigure_entry, "data", {}) or {}),
+            **(getattr(reconfigure_entry, "options", {}) or {}),
+        }
+        errors = {}
+
+        if user_input is not None:
+            self._reconfigure_data = user_input
+            activation = user_input.get(CONF_ACTIVATION_MODE)
+            if needs_stationary_step(activation):
+                return await self.async_step_reconfigure_stationary()
+            return await self._async_finish_reconfigure(user_input)
+
+        notify_services = []
+        try:
+            all_services = self.hass.services.async_services()
+            notify_domain_services = all_services.get("notify", {})
+            notify_services = [
+                f"notify.{service}"
+                for service in notify_domain_services.keys()
+                if service not in ["persistent_notification"]
+            ]
+            telegram_domain_services = all_services.get("telegram_bot", {})
+            if "send_message" in telegram_domain_services:
+                notify_services.append("telegram_bot.send_message")
+        except Exception:
+            pass
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_DEVICE_TRACKER,
+                        default=current.get(CONF_DEVICE_TRACKER) or vol.UNDEFINED,
+                    ): EntitySelector(EntitySelectorConfig(domain="device_tracker")),
+                    vol.Required(
+                        "tag_model",
+                        default=current.get("tag_model", "vedeneb_ha_smartthings_find"),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                {"value": k, "label": v}
+                                for k, v in TAG_MODELS.items()
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_ACTIVATION_MODE,
+                        default=current.get(CONF_ACTIVATION_MODE, "combined"),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=["combined", "position", "connection", "manual"],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="activation_mode",
+                        )
+                    ),
+                    vol.Required(
+                        CONF_NOTIFIER,
+                        default=current.get(
+                            CONF_NOTIFIER,
+                            notify_services[0] if notify_services else "notify.notify",
+                        ),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=notify_services if notify_services else ["notify.notify"],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            custom_value=True,
+                        )
+                    ) if notify_services else TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
+                    vol.Required(
+                        CONF_TOLERANCE_RADIUS,
+                        default=current.get(CONF_TOLERANCE_RADIUS, 200),
+                    ): NumberSelector(
+                        NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")
+                    ),
+                    vol.Required(
+                        "debug_mode",
+                        default=current.get("debug_mode", False),
+                    ): BooleanSelector(BooleanSelectorConfig()),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure_stationary(self, user_input=None):
+        """Collect stationary parameters during reconfiguration."""
+        reconfigure_entry = (
+            self._get_reconfigure_entry()
+            if hasattr(self, "_get_reconfigure_entry")
+            else self.hass.config_entries.async_get_entry(self.context.get("entry_id"))
+        )
+        current = {
+            **(getattr(reconfigure_entry, "data", {}) or {}),
+            **(getattr(reconfigure_entry, "options", {}) or {}),
+            **(getattr(self, "_reconfigure_data", {}) or {}),
+        }
+        if user_input is not None:
+            return await self._async_finish_reconfigure(user_input)
+
+        return self.async_show_form(
+            step_id="reconfigure_stationary",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_STATIONARY_MINUTES,
+                        default=current.get(CONF_STATIONARY_MINUTES, 10),
+                    ): NumberSelector(
+                        NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="min")
+                    ),
+                    vol.Required(
+                        CONF_STATIONARY_COUNT,
+                        default=current.get(CONF_STATIONARY_COUNT, 3),
+                    ): NumberSelector(
+                        NumberSelectorConfig(min=0, max=20, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="samples")
+                    ),
+                }
+            ),
+        )
+
+    async def _async_finish_reconfigure(self, user_input):
+        """Finish reconfigure step by updating entry and aborting."""
+        reconfigure_entry = (
+            self._get_reconfigure_entry()
+            if hasattr(self, "_get_reconfigure_entry")
+            else self.hass.config_entries.async_get_entry(self.context.get("entry_id"))
+        )
+        base = getattr(self, "_reconfigure_data", {})
+        merged = {**base, **user_input}
+        existing_token = (
+            (getattr(reconfigure_entry, "options", {}) or {}).get("webhook_token")
+            or (getattr(reconfigure_entry, "data", {}) or {}).get("webhook_token")
+        )
+        if existing_token:
+            merged["webhook_token"] = existing_token
+
+        data, options = build_create_payload(merged)
+
+        if hasattr(self, "async_update_reload_and_abort"):
+            return self.async_update_reload_and_abort(
+                reconfigure_entry,
+                data_updates=data,
+                options_updates=options,
+            )
+        elif hasattr(self, "async_update_and_abort"):
+            return self.async_update_and_abort(
+                reconfigure_entry,
+                data_updates=data,
+                options_updates=options,
+            )
+        else:
+            import inspect
+            self.hass.config_entries.async_update_entry(
+                reconfigure_entry, data=data, options=options
+            )
+            reload_res = self.hass.config_entries.async_reload(reconfigure_entry.entry_id)
+            if inspect.isawaitable(reload_res):
+                await reload_res
+            return self.async_abort(reason="reconfigure_successful")
+

@@ -32,8 +32,24 @@ from .utils import get_webhook_url, needs_stationary_step
 
 
 class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
+    def __init__(self, config_entry=None):
+        self._config_entry = config_entry
+
+    @property
+    def config_entry(self):
+        """Return the config entry."""
+        if hasattr(super(), "config_entry"):
+            try:
+                entry = super().config_entry
+                if entry is not None:
+                    return entry
+            except Exception:
+                pass
+        if getattr(self, "_config_entry", None) is not None:
+            return self._config_entry
+        if hasattr(self, "hass") and self.hass and hasattr(self, "handler"):
+            return self.hass.config_entries.async_get_entry(self.handler)
+        return self._config_entry
 
     async def async_step_init(self, user_input=None):
         """Initial options step: collect main options; branch to stationary if needed."""

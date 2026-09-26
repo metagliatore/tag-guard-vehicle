@@ -192,3 +192,94 @@ def test_get_webhook_url_variations():
 	assert get_webhook_url(hass_ext, "tok456") == "https://remote.ha.com/api/webhook/tok456"
 
 
+@pytest.mark.asyncio
+async def test_options_flow_handles_read_only_config_entry_property():
+	# Simulate modern Home Assistant where config_entry is a property
+	class MockModernOptionsFlow(TagGuardVehicleOptionsFlowHandler):
+		@property
+		def config_entry(self):
+			return self._config_entry
+
+	entry = SimpleNamespace(
+		entry_id="modern_entry",
+		data={"device_tracker": "device_tracker.my_tracker"},
+		options={"activation_mode": "manual"},
+	)
+	# Should not raise AttributeError: can't set attribute 'config_entry'
+	flow = MockModernOptionsFlow(entry)
+	assert flow.config_entry == entry
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_flow_full_cycle():
+	from custom_components.tag_guard_vehicle.config_flow import TagGuardVehicleConfigFlow
+	from custom_components.tag_guard_vehicle.const import (
+		CONF_DEVICE_TRACKER,
+		CONF_ACTIVATION_MODE,
+		CONF_NOTIFIER,
+		CONF_TOLERANCE_RADIUS,
+		CONF_STATIONARY_MINUTES,
+		CONF_STATIONARY_COUNT,
+	)
+
+	entry = SimpleNamespace(
+		entry_id="reconfig_entry_id",
+		data={CONF_DEVICE_TRACKER: "device_tracker.old_tag"},
+		options={
+			CONF_ACTIVATION_MODE: "combined",
+			CONF_NOTIFIER: "notify.mobile_app",
+			CONF_TOLERANCE_RADIUS: 200,
+			CONF_STATIONARY_MINUTES: 10,
+			CONF_STATIONARY_COUNT: 3,
+			"webhook_token": "keep_this_token",
+		},
+	)
+	updated = {}
+	reloaded = []
+	hass = SimpleNamespace(
+		config_entries=SimpleNamespace(
+			async_get_entry=lambda eid: entry,
+			async_update_entry=lambda e, data=None, options=None: updated.update({"data": data, "options": options}),
+			async_reload=lambda eid: reloaded.append(eid),
+		),
+		services=SimpleNamespace(async_services=lambda: {}),
+	)
+
+	flow = TagGuardVehicleConfigFlow()
+	flow.hass = hass
+	flow.context = {"source": "reconfigure", "entry_id": "reconfig_entry_id"}
+
+	# Step 1: Initial reconfigure form
+	form_res = await flow.async_step_reconfigure(None)
+	assert form_res["type"] == "form"
+	assert form_res["step_id"] == "reconfigure"
+
+	# Step 2: Submit with combined mode (branches to stationary)
+	branch_res = await flow.async_step_reconfigure({
+		CONF_DEVICE_TRACKER: "device_tracker.new_tag",
+		"tag_model": "vedeneb_ha_smartthings_find",
+		CONF_ACTIVATION_MODE: "combined",
+		CONF_NOTIFIER: "notify.mobile_app",
+		CONF_TOLERANCE_RADIUS: 250,
+		"debug_mode": True,
+	})
+	assert branch_res["type"] == "form"
+	assert branch_res["step_id"] == "reconfigure_stationary"
+
+	# Step 3: Submit stationary parameters
+	finish_res = await flow.async_step_reconfigure_stationary({
+		CONF_STATIONARY_MINUTES: 15,
+		CONF_STATIONARY_COUNT: 5,
+	})
+	assert finish_res["type"] == "abort"
+	assert finish_res["reason"] == "reconfigure_successful"
+
+	# Check updated data and options
+	assert updated["data"][CONF_DEVICE_TRACKER] == "device_tracker.new_tag"
+	assert updated["options"][CONF_STATIONARY_MINUTES] == 15
+	assert updated["options"][CONF_STATIONARY_COUNT] == 5
+	assert updated["options"]["webhook_token"] == "keep_this_token"
+	assert "reconfig_entry_id" in reloaded
+
+
+
