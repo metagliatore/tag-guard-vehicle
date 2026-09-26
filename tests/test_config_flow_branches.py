@@ -97,7 +97,7 @@ async def test_async_step_show_token_builds_webhook_url_and_creates_entry_title(
     flow = TagGuardVehicleConfigFlow()
     flow.hass = FakeHass(base_url="http://example:8123")
     flow._create_payload = (
-        {"device_tracker": "device_tracker.smarttagscooter"},
+        {"device_tracker": "device_tracker.vehicle_tag"},
         {"webhook_token": "abc123"},
     )
 
@@ -109,4 +109,4 @@ async def test_async_step_show_token_builds_webhook_url_and_creates_entry_title(
 
     created = await flow.async_step_show_token({})
     assert created["type"] == "create_entry"
-    assert "Smarttagscooter" in created["title"]
+    assert "Vehicle Tag" in created["title"]

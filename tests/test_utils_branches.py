@@ -84,10 +84,10 @@ async def test_translate_formats_and_handles_format_error():
         }
 
     with patch("homeassistant.helpers.translation.async_get_translations", side_effect=fake_get_translations):
-        ok = await utils.translate(FakeHass(), "messages.sample", "fallback", name="Gera")
-        bad = await utils.translate(FakeHass(), "messages.bad", "fallback", name="Gera")
+        ok = await utils.translate(FakeHass(), "messages.sample", "fallback", name="User")
+        bad = await utils.translate(FakeHass(), "messages.bad", "fallback", name="User")
 
-    assert ok == "Hello Gera"
+    assert ok == "Hello User"
     # format error path returns unformatted text
     assert bad == "Hello {missing}"
 

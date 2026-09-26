@@ -237,7 +237,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Include device_tracker in title for easier identification in UI
             device_tracker = data.get("device_tracker", "")
             if device_tracker:
-                # Extract just the name part (e.g., "smarttagscooter" from "device_tracker.smarttagscooter")
+                # Extract just the name part (e.g., "vehicle_tag" from "device_tracker.vehicle_tag")
                 tracker_name = device_tracker.replace("device_tracker.", "").replace("_", " ").title()
                 title = f"Tag Guard Vehicle ({tracker_name})"
             else:

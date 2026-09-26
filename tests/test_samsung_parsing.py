@@ -18,18 +18,18 @@ SAMPLE = {
     "latitude": "45.1234567",
     "longitude": "9.1234567",
     "gps_accuracy": 20.1,
-    "dev_name": "SmartTagScooter",
+    "dev_name": "VehicleTag",
     "dev_id": 123456789,
     "update_success": True,
     "location_found": True,
     "ops": [
         {
-            "oprnCrtDate": "20251026221803",
-            "oprnDoneDate": "20251026221803",
+            "oprnCrtDate": "20250101120000",
+            "oprnDoneDate": "20250101120000",
             "oprnType": "LOCATION",
             "oprnStsCd": "2800",
             "oprnResultCode": "1200",
-            "extra": {"gpsUtcDt": "20251026221714"},
+            "extra": {"gpsUtcDt": "20250101120000"},
             "latitude": "45.1234567",
             "longitude": "9.1234567",
             "horizontalUncertainty": "14.229",
@@ -37,8 +37,8 @@ SAMPLE = {
             "locationType": "basic",
         },
         {
-            "oprnCrtDate": "20251026221803",
-            "oprnDoneDate": "20251026221803",
+            "oprnCrtDate": "20250101120000",
+            "oprnDoneDate": "20250101120000",
             "oprnType": "CHECK_CONNECTION",
             "oprnStsCd": "2800",
             "oprnResultCode": "1200",
@@ -55,7 +55,7 @@ def test_parse_ops_returns_list_and_extract_first_location():
     first = ops[0]
     assert first.get("oprnType") == "LOCATION"
     lat = utils.safe_get(first, "extra", "gpsUtcDt")
-    assert lat == "20251026221714"
+    assert lat == "20250101120000"
 
 
 # Test: parser-handled ops support replacing coordinates and computing haversine=0

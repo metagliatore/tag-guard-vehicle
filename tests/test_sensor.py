@@ -7,7 +7,7 @@ from custom_components.tag_guard_vehicle.sensor import TagGuardVehicleSensor
 class FakeEntry:
 	def __init__(self):
 		self.entry_id = "entry_1"
-		self.data = {"device_tracker": "device_tracker.smarttagscooter"}
+		self.data = {"device_tracker": "device_tracker.vehicle_tag"}
 		self.options = {}
 
 	def add_update_listener(self, listener):
@@ -31,7 +31,7 @@ class FakeCoordinator:
 		self.activation_mode = "position"
 		self.debug_mode = False
 		self._awaiting_activation_save = False
-		self.config = {"device_tracker": "device_tracker.smarttagscooter"}
+		self.config = {"device_tracker": "device_tracker.vehicle_tag"}
 		self.person_entity = "person.test"
 		self.notifier = "mobile_app"
 
@@ -46,7 +46,7 @@ async def test_sensor_name_includes_device_tracker():
 	coordinator = FakeCoordinator()
 	sensor = TagGuardVehicleSensor(FakeHass(coordinator), FakeEntry())
 
-	assert "device_tracker.smarttagscooter" in sensor.name
+	assert "device_tracker.vehicle_tag" in sensor.name
 
 
 @pytest.mark.asyncio

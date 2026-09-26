@@ -32,12 +32,12 @@ def _sample_attrs(d2d_status: str = "gattConnected"):
                     "longitude": "9.1234567",
                     "method": "fused",
                     "accuracy": "14.249",
-                    "lastUpdateTime": 1779729665244,
+                    "lastUpdateTime": 1700000000000,
                     "valid": True,
                 }
             ],
         },
-        "last_seen": "2026-05-25T17:21:05.244000+00:00",
+        "last_seen": "2025-01-01T12:00:00.000000+00:00",
     }
 
 
@@ -89,7 +89,7 @@ def test_parse_connection_state_network_only_tag_is_disconnected():
                     "method": "wifi",
                     "accuracy": "100.0",
                     "battery": "FULL",
-                    "lastUpdateTime": 1783170442523,
+                    "lastUpdateTime": 1700000000000,
                     "valid": True,
                 }
             ],
@@ -117,7 +117,7 @@ def test_parse_connection_state_nearby_phone_tag_is_connected():
                     "method": "fused",
                     "accuracy": "14.003",
                     "battery": "FULL",
-                    "lastUpdateTime": 1783173310335,
+                    "lastUpdateTime": 1700000000000,
                     "valid": True,
                 }
             ],
