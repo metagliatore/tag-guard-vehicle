@@ -6,7 +6,7 @@
   "issue_tracker": "https://github.com/metagliatore/tag-guard-vehicle/issues",
   "requirements": [],
   "dependencies": [],
-  "version": "0.1.0",
+  "version": "1.0.0",
   "config_flow": true,
   "iot_class": "local_polling",
   "integration_type": "device",
