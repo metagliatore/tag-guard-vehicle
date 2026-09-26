@@ -32,7 +32,7 @@ from .const import (
     CONF_WEBHOOK_TOKEN,
     TAG_MODELS,
 )
-from .utils import needs_stationary_step, build_create_payload
+from .utils import needs_stationary_step, build_create_payload, get_webhook_url
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +41,16 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tag Guard Vehicle."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Create the options flow."""
+        from .options_flow import TagGuardVehicleOptionsFlowHandler
+
+        return TagGuardVehicleOptionsFlowHandler(config_entry)
 
     async def async_step_user(self, user_input=None):
         """Initial step: collect device_tracker and basic options.
@@ -218,22 +228,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         data, options = getattr(self, "_create_payload", ({}, {}))
         token = options.get("webhook_token", "")
-        # try to build a full webhook URL using HA's configured external/base URL
-        webhook_url = token
-        try:
-            # prefer api.base_url when available (includes protocol/port)
-            api_cfg = getattr(self.hass.config, "api", None)
-            if api_cfg and getattr(api_cfg, "base_url", None):
-                base = api_cfg.base_url
-            else:
-                # fall back to external_url or internal_url if present
-                base = getattr(self.hass.config, "external_url", None) or getattr(self.hass.config, "internal_url", None) or ""
-
-            if base and token:
-                webhook_url = f"{base.rstrip('/')}/api/webhook/{token}"
-        except Exception:
-            # best-effort: if we can't compute it, fall back to token only
-            webhook_url = token
+        webhook_url = get_webhook_url(self.hass, token)
         
         if user_input is not None:
             # user confirmed by clicking Submit (no fields to validate)

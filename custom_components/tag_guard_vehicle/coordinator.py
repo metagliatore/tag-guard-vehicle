@@ -14,6 +14,7 @@ from homeassistant.helpers.event import async_track_state_change_event, async_ca
 
 from .const import (
     DOMAIN,
+    CONF_DEVICE_TRACKER,
     CONF_TOLERANCE_RADIUS,
     CONF_STATIONARY_MINUTES,
     CONF_STATIONARY_COUNT,
@@ -420,6 +421,26 @@ class VehicleCoordinator:
             self.config["tag_model"] = options.get("tag_model", self.config.get("tag_model"))
         except Exception:
             pass
+
+        # Check if device_tracker changed
+        new_device_tracker = options.get(CONF_DEVICE_TRACKER)
+        if (
+            new_device_tracker
+            and hasattr(self, "device_tracker_entity")
+            and new_device_tracker != self.device_tracker_entity
+        ):
+            _LOGGER.info(
+                "Updating coordinator device_tracker from %s to %s",
+                self.device_tracker_entity,
+                new_device_tracker,
+            )
+            if self._unsub_track:
+                self._unsub_track()
+                self._unsub_track = None
+            self.config[CONF_DEVICE_TRACKER] = new_device_tracker
+            await self.async_start(new_device_tracker)
+            await self.async_initialize_position_if_needed(new_device_tracker)
+
         # store options in config for persistence if desired
         self.config.setdefault("options", {})
         self.config["options"].update(options)

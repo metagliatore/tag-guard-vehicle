@@ -106,3 +106,89 @@ async def test_options_flow_branches_to_stationary_for_position_mode():
 	assert result["type"] == "form"
 	assert result["step_id"] == "stationary"
 
+
+def test_config_flow_async_get_options_flow():
+	from custom_components.tag_guard_vehicle.config_flow import TagGuardVehicleConfigFlow
+	entry = _fake_entry("entry-1")
+	flow = TagGuardVehicleConfigFlow.async_get_options_flow(entry)
+	assert isinstance(flow, TagGuardVehicleOptionsFlowHandler)
+	assert flow.config_entry == entry
+
+
+@pytest.mark.asyncio
+async def test_options_flow_init_form_shows_all_parameters():
+	from custom_components.tag_guard_vehicle.const import CONF_DEVICE_TRACKER, CONF_NOTIFIER, CONF_TOLERANCE_RADIUS, CONF_ACTIVATION_MODE
+
+	entry = SimpleNamespace(
+		entry_id="test_entry",
+		data={CONF_DEVICE_TRACKER: "device_tracker.my_car"},
+		options={
+			CONF_NOTIFIER: "notify.mobile_app",
+			CONF_TOLERANCE_RADIUS: 150,
+			CONF_ACTIVATION_MODE: "combined",
+			"webhook_token": "secret_token_123",
+			"debug_mode": True,
+		},
+	)
+	hass = SimpleNamespace(
+		config=SimpleNamespace(api=SimpleNamespace(base_url="https://ha.example.com")),
+		services=SimpleNamespace(async_services=lambda: {"notify": {"mobile_app": {}}}),
+	)
+	flow = TagGuardVehicleOptionsFlowHandler(entry)
+	flow.hass = hass
+
+	result = await flow.async_step_init(None)
+	assert result["type"] == "form"
+	assert result["step_id"] == "init"
+	assert "webhook_url" in result["description_placeholders"]
+	assert "https://ha.example.com/api/webhook/secret_token_123" == result["description_placeholders"]["webhook_url"]
+	assert result["description_placeholders"]["webhook_token"] == "secret_token_123"
+
+
+@pytest.mark.asyncio
+async def test_options_flow_updates_device_tracker_in_entry_data():
+	from custom_components.tag_guard_vehicle.const import CONF_DEVICE_TRACKER
+
+	entry = SimpleNamespace(
+		entry_id="test_entry",
+		data={CONF_DEVICE_TRACKER: "device_tracker.old_car"},
+		options={"activation_mode": "manual"},
+	)
+	updated_data = {}
+	fake_config_entries = SimpleNamespace(
+		async_update_entry=lambda e, data=None: updated_data.update(data or {})
+	)
+	hass = SimpleNamespace(
+		config_entries=fake_config_entries,
+		services=SimpleNamespace(async_services=lambda: {}),
+	)
+	flow = TagGuardVehicleOptionsFlowHandler(entry)
+	flow.hass = hass
+
+	result = await flow.async_step_init({
+		CONF_DEVICE_TRACKER: "device_tracker.new_car",
+		"activation_mode": "manual",
+	})
+	assert result["type"] == "create_entry"
+	assert updated_data.get(CONF_DEVICE_TRACKER) == "device_tracker.new_car"
+
+
+def test_get_webhook_url_variations():
+	from custom_components.tag_guard_vehicle.utils import get_webhook_url
+
+	# Empty token
+	assert get_webhook_url(None, "") == ""
+	assert get_webhook_url(None, None) == ""
+
+	# No hass provided
+	assert get_webhook_url(None, "my_token") == "my_token"
+
+	# Hass with api.base_url
+	hass_base = SimpleNamespace(config=SimpleNamespace(api=SimpleNamespace(base_url="http://my-ha:8123/")))
+	assert get_webhook_url(hass_base, "tok123") == "http://my-ha:8123/api/webhook/tok123"
+
+	# Hass with external_url fallback
+	hass_ext = SimpleNamespace(config=SimpleNamespace(external_url="https://remote.ha.com", internal_url=None))
+	assert get_webhook_url(hass_ext, "tok456") == "https://remote.ha.com/api/webhook/tok456"
+
+

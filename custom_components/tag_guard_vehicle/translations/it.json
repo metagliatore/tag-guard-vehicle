@@ -42,6 +42,52 @@
       "webhook_url_readonly": "L'URL del webhook \u00e8 di sola lettura."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configura tracker veicolo",
+        "description": "🔗 **Configurazione Webhook Attuale**\n\n📋 **URL Webhook completo:**\n`{webhook_url}`\n\n🔑 **Solo token:** `{webhook_token}`\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nModifica i parametri del tracker veicolo qui sotto.",
+        "data": {
+          "device_tracker": "Tracker del dispositivo",
+          "tag_model": "Modello tag / parser",
+          "activation_mode": "Modalit\u00e0 di attivazione",
+          "notifier": "Servizio notifiche",
+          "tolerance_radius": "Raggio di tolleranza",
+          "debug_mode": "Modalit\u00e0 debug"
+        },
+        "data_description": {
+          "device_tracker": "\ud83d\udccd Entit\u00e0 device_tracker per il tuo tag Bluetooth.",
+          "tag_model": "\ud83c\udff7\ufe0f Seleziona l'integrazione SmartThings Find che usi. Il default va bene per la maggior parte.",
+          "activation_mode": "\u2699\ufe0f 'combined' (consigliato) \u2014 si attiva su disconnessione O posizione stabile. 'position' \u2014 posizione stabile. 'connection' \u2014 disconnessione Bluetooth. 'manual' \u2014 controllo manuale.",
+          "notifier": "\ud83d\udd14 Servizio per gli avvisi (es. notify.mobile_app).",
+          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 200).",
+          "debug_mode": "\ud83d\udc1b Abilita log dettagliati per diagnostica."
+        }
+      },
+      "stationary": {
+        "title": "Rilevamento sosta",
+        "description": "Configura per quanto tempo il veicolo deve rimanere fermo prima di attivare l'allarme.",
+        "data": {
+          "stationary_minutes": "Tempo (minuti)",
+          "stationary_count": "Conteggio (campioni)"
+        },
+        "data_description": {
+          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 10.",
+          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 3."
+        }
+      }
+    }
+  },
+  "selector": {
+    "activation_mode": {
+      "options": {
+        "combined": "Combinata (disconnessione O posizione stabile)",
+        "position": "Posizione (GPS stabile)",
+        "connection": "Connessione (disconnessione Bluetooth)",
+        "manual": "Manuale (solo pulsanti)"
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "vehicle_status": {

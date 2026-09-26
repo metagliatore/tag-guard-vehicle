@@ -25,6 +25,30 @@ def is_webhook_token_in_use(hass, token: str, exclude_entry_id: str = None) -> b
     return False
 
 
+def get_webhook_url(hass, token: str) -> str:
+    """Build a full webhook URL for the given token."""
+    if not token:
+        return ""
+    webhook_url = token
+    if hass:
+        try:
+            api_cfg = getattr(getattr(hass, "config", None), "api", None)
+            if api_cfg and getattr(api_cfg, "base_url", None):
+                base = api_cfg.base_url
+            else:
+                base = (
+                    getattr(hass.config, "external_url", None)
+                    or getattr(hass.config, "internal_url", None)
+                    or ""
+                )
+            if base:
+                webhook_url = f"{base.rstrip('/')}/api/webhook/{token}"
+        except Exception:
+            webhook_url = token
+    return webhook_url
+
+
+
 def meters_to_degrees(meters: float) -> float:
     """Convert meters to degrees roughly (1 deg lat ~ 111km)."""
     return meters / 111000.0

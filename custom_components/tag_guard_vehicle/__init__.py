@@ -113,9 +113,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_register_helper_services(hass, coordinator, entry.entry_id, token)
 
     # listen for options updates on the entry and apply them at runtime
-    async def _entry_update_listener(updated_entry: ConfigEntry):
-        new_options = updated_entry.options
-        await coordinator.async_update_options(new_options)
+    async def _entry_update_listener(*args):
+        updated_entry = args[1] if len(args) > 1 else args[0]
+        merged_options = {**(updated_entry.data or {}), **(updated_entry.options or {})}
+        await coordinator.async_update_options(merged_options)
 
     entry.add_update_listener(_entry_update_listener)
 
