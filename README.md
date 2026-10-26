@@ -12,7 +12,7 @@ Home Assistant integration to monitor and protect your vehicle using a Bluetooth
 
 1. **🅿️ Automatic Position Saving** - When you park your vehicle, the integration automatically saves the GPS coordinates from your Bluetooth tracker
 2. **🔐 Guard Activation** - After saving the position, monitoring is automatically activated (or manually, depending on your configuration)
-3. **� Always Know Where You Parked** - The parking location is saved in the sensor, so you can always find your vehicle
+3. **🗺️ Always Know Where You Parked** - The parking location is saved in the sensor, so you can always find your vehicle
 4. **🚨 Theft/Movement Detection** - If your vehicle moves beyond the configured radius (default 500m), you receive an immediate notification
 5. **💾 Persistent Storage** - Your parking location is saved across Home Assistant restarts
 
@@ -38,8 +38,9 @@ Home Assistant integration to monitor and protect your vehicle using a Bluetooth
 ## Supported Devices
 
 Currently, the integration supports **Samsung SmartTag 2** devices connected via:
-- [HA-SmartThings-Find](https://github.com/Vedeneb/HA-SmartThings-Find) - Original integration
+- [HA-SmartThings-Find (PixelShober fork)](https://github.com/PixelShober/HA-SmartThings-Find) - Modern active fork (optimized polling, state-change gating, and device discovery)
 - [HA-SmartThings-Find (tomskra fork)](https://github.com/tomskra/HA-SmartThings-Find) - Fixed login issues
+- [HA-SmartThings-Find (Vedeneb)](https://github.com/Vedeneb/HA-SmartThings-Find) - Original integration
 
 You need one of these integrations installed to provide the `device_tracker` entity for your SmartTag.
 
@@ -48,7 +49,7 @@ You need one of these integrations installed to provide the `device_tracker` ent
 ## Installation
 
 1. **Install SmartThings Find integration first:**
-   - Install either [Vedeneb's](https://github.com/Vedeneb/HA-SmartThings-Find) or [tomskra's fork](https://github.com/tomskra/HA-SmartThings-Find) (recommended for login fix)
+   - Install [PixelShober's](https://github.com/PixelShober/HA-SmartThings-Find) (recommended) or [tomskra's](https://github.com/tomskra/HA-SmartThings-Find) or [Vedeneb's](https://github.com/Vedeneb/HA-SmartThings-Find) integration
    - Configure your Samsung account
    - Verify your SmartTag appears as a `device_tracker` entity
 
@@ -385,12 +386,12 @@ Or via integration options: **Configure** → **Enable debug mode**
 | Option | Description | Default |
 |--------|-------------|---------|
 | `device_tracker` | Your Bluetooth tracker entity | Required |
-| `activation_mode` | When to activate: `connection`, `position`, `combined`, `manual` | `manual` |
+| `activation_mode` | When to activate: `combined`, `connection`, `position`, `manual` | `combined` |
 | `notifier` | Home Assistant notify service | `notify.notify` |
 | `tolerance_radius` | Alert distance in meters | `500` |
 | `stationary_minutes` | Minutes stable before activation (position/combined modes) | `30` |
 | `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `2` |
-| `tag_model` | Bluetooth tag parser model | `vedeneb_ha_smartthings_find` |
+| `tag_model` | Parser model: `vedeneb_ha_smartthings_find` or `pixelshober_ha_smartthings_find` | `vedeneb_ha_smartthings_find` |
 | `webhook_token` | Custom webhook token (auto-generated if empty) | Auto-generated |
 | `debug_mode` | Enable verbose logging | `false` |
 
