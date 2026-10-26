@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="custom_components/tag_guard_vehicle/brand/logo.png" alt="Tag Guard Vehicle Logo" width="160">
+</p>
+
 # Tag Guard Vehicle
 
 Home Assistant integration to monitor and protect your vehicle using a Bluetooth tracker (SmartTag, AirTag, Tile, etc.). 
