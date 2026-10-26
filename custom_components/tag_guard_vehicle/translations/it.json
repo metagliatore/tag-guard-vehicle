@@ -17,7 +17,7 @@
           "tag_model": "\ud83c\udff7\ufe0f Seleziona l'integrazione SmartThings Find che usi. Il default va bene per la maggior parte.",
           "activation_mode": "\u2699\ufe0f 'combined' (consigliato) \u2014 si attiva su disconnessione O posizione stabile. 'position' \u2014 posizione stabile. 'connection' \u2014 disconnessione Bluetooth. 'manual' \u2014 controllo manuale.",
           "notifier": "\ud83d\udd14 Servizio per gli avvisi (es. notify.mobile_app).",
-          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 200).",
+          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 500).",
           "debug_mode": "\ud83d\udc1b Abilita log dettagliati per diagnostica."
         }
       },
@@ -29,8 +29,8 @@
           "stationary_count": "Conteggio (campioni)"
         },
         "data_description": {
-          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 10.",
-          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 3."
+          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 30.",
+          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 2."
         }
       },
       "show_token": {
@@ -52,7 +52,7 @@
           "tag_model": "\ud83c\udff7\ufe0f Seleziona l'integrazione SmartThings Find che usi. Il default va bene per la maggior parte.",
           "activation_mode": "\u2699\ufe0f 'combined' (consigliato) \u2014 si attiva su disconnessione O posizione stabile. 'position' \u2014 posizione stabile. 'connection' \u2014 disconnessione Bluetooth. 'manual' \u2014 controllo manuale.",
           "notifier": "\ud83d\udd14 Servizio per gli avvisi (es. notify.mobile_app).",
-          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 200).",
+          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 500).",
           "debug_mode": "\ud83d\udc1b Abilita log dettagliati per diagnostica."
         }
       },
@@ -64,8 +64,8 @@
           "stationary_count": "Conteggio (campioni)"
         },
         "data_description": {
-          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 10.",
-          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 3."
+          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 30.",
+          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 2."
         }
       }
     },
@@ -95,7 +95,7 @@
           "tag_model": "\ud83c\udff7\ufe0f Seleziona l'integrazione SmartThings Find che usi. Il default va bene per la maggior parte.",
           "activation_mode": "\u2699\ufe0f 'combined' (consigliato) \u2014 si attiva su disconnessione O posizione stabile. 'position' \u2014 posizione stabile. 'connection' \u2014 disconnessione Bluetooth. 'manual' \u2014 controllo manuale.",
           "notifier": "\ud83d\udd14 Servizio per gli avvisi (es. notify.mobile_app).",
-          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 200).",
+          "tolerance_radius": "\ud83d\udccd Distanza minima (metri) prima dell'allarme movimento (default: 500).",
           "debug_mode": "\ud83d\udc1b Abilita log dettagliati per diagnostica."
         }
       },
@@ -107,8 +107,8 @@
           "stationary_count": "Conteggio (campioni)"
         },
         "data_description": {
-          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 10.",
-          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 3."
+          "stationary_minutes": "\u23f1\ufe0f Minuti di posizione stabile prima dello scadere del timer. Consigliato: 30.",
+          "stationary_count": "\ud83d\udcca Campioni GPS necessari. 0 = salta verifica conteggio. Consigliato: 2."
         }
       }
     }

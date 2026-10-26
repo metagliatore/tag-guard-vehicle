@@ -16,6 +16,11 @@ CONF_WEBHOOK_TOKEN = "webhook_token"
 
 DEFAULT_WEBHOOK_ID = "vehicle-save-location"
 
+# Default configuration values
+DEFAULT_TOLERANCE_RADIUS = 500
+DEFAULT_STATIONARY_MINUTES = 30
+DEFAULT_STATIONARY_COUNT = 2
+
 # Tag models
 TAG_MODELS = {
     "vedeneb_ha_smartthings_find": "Samsung SmartTag2 (Vedeneb/HA-SmartThings-Find)",

@@ -6,13 +6,13 @@
 # device_tracker,person,notifier,tolerance,activation_mode,tag_model,webhook_token,debug_mode
 
 # Example:
-device_tracker.vehicle_tag,person.john_doe,notify.mobile_app_phone,200,manual,samsung_smarttag2,example_token_123,true
+device_tracker.vehicle_tag,person.john_doe,notify.mobile_app_phone,500,manual,samsung_smarttag2,example_token_123,true
 
 # Field descriptions:
 # 1. device_tracker: Your device tracker entity ID (e.g., device_tracker.smarttag)
 # 2. person: Person entity ID (e.g., person.john)
 # 3. notifier: Notify service (e.g., notify.mobile_app or notify.telegram)
-# 4. tolerance: Tolerance radius in meters (default: 200)
+# 4. tolerance: Tolerance radius in meters (default: 500)
 # 5. activation_mode: manual|connection|position|combined
 # 6. tag_model: samsung_smarttag2 (or other supported models)
 # 7. webhook_token: Custom webhook token for testing (e.g., testToken123)

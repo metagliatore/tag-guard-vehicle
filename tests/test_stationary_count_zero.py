@@ -44,8 +44,8 @@ async def test_stationary_count_default_when_missing(hass):
     
     coordinator = VehicleCoordinator(hass, "test_entry", config)
     
-    # Should use default value of 3
-    assert coordinator.stationary_count == 3
+    # Should use default value of 2
+    assert coordinator.stationary_count == 2
     assert coordinator.stationary_minutes == 10
 
 

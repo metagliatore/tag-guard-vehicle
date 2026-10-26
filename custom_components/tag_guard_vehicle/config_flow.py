@@ -30,6 +30,9 @@ from .const import (
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
     CONF_WEBHOOK_TOKEN,
+    DEFAULT_TOLERANCE_RADIUS,
+    DEFAULT_STATIONARY_MINUTES,
+    DEFAULT_STATIONARY_COUNT,
     TAG_MODELS,
 )
 from .utils import needs_stationary_step, build_create_payload, get_webhook_url
@@ -119,7 +122,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_DEVICE_TRACKER: parts[0].strip(),
                             CONF_PERSON_ENTITY: parts[1].strip(),
                             CONF_NOTIFIER: parts[2].strip(),
-                            CONF_TOLERANCE_RADIUS: int(parts[3].strip()) if parts[3].strip().isdigit() else 200,
+                            CONF_TOLERANCE_RADIUS: int(parts[3].strip()) if parts[3].strip().isdigit() else DEFAULT_TOLERANCE_RADIUS,
                             CONF_ACTIVATION_MODE: parts[4].strip() if parts[4].strip() in ["connection", "position", "combined", "manual"] else "combined",
                             "tag_model": parts[5].strip() if parts[5].strip() in TAG_MODELS else "vedeneb_ha_smartthings_find",
                             "webhook_token": parts[6].strip() or "",
@@ -175,7 +178,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         )),
 
                     # ── 5. Tolerance Radius ────────────────────────────
-                    vol.Required(CONF_TOLERANCE_RADIUS, default=stub_data.get(CONF_TOLERANCE_RADIUS, 200)): NumberSelector(
+                    vol.Required(CONF_TOLERANCE_RADIUS, default=stub_data.get(CONF_TOLERANCE_RADIUS, DEFAULT_TOLERANCE_RADIUS)): NumberSelector(
                         NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")
                     ),
 
@@ -209,10 +212,10 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="stationary",
                 data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_STATIONARY_MINUTES, default=10): NumberSelector(
+                    vol.Required(CONF_STATIONARY_MINUTES, default=DEFAULT_STATIONARY_MINUTES): NumberSelector(
                         NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="min")
                     ),
-                    vol.Required(CONF_STATIONARY_COUNT, default=3): NumberSelector(
+                    vol.Required(CONF_STATIONARY_COUNT, default=DEFAULT_STATIONARY_COUNT): NumberSelector(
                         NumberSelectorConfig(min=0, max=20, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="samples")
                     ),
                 }
@@ -344,7 +347,7 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ) if notify_services else TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
                     vol.Required(
                         CONF_TOLERANCE_RADIUS,
-                        default=current.get(CONF_TOLERANCE_RADIUS, 200),
+                        default=current.get(CONF_TOLERANCE_RADIUS, DEFAULT_TOLERANCE_RADIUS),
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=1000, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="m")
                     ),
@@ -378,13 +381,13 @@ class TagGuardVehicleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(
                         CONF_STATIONARY_MINUTES,
-                        default=current.get(CONF_STATIONARY_MINUTES, 10),
+                        default=current.get(CONF_STATIONARY_MINUTES, DEFAULT_STATIONARY_MINUTES),
                     ): NumberSelector(
                         NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="min")
                     ),
                     vol.Required(
                         CONF_STATIONARY_COUNT,
-                        default=current.get(CONF_STATIONARY_COUNT, 3),
+                        default=current.get(CONF_STATIONARY_COUNT, DEFAULT_STATIONARY_COUNT),
                     ): NumberSelector(
                         NumberSelectorConfig(min=0, max=20, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="samples")
                     ),

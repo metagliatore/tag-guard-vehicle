@@ -27,7 +27,7 @@
       "tracker_label": "Tracker",
       "entity_not_found": "Entit\u00e4t {entity} nicht gefunden",
       "debug_help": "Aktivieren Sie ausf\u00fchrliche Debug-Logs (nur f\u00fcr Fehlersuche).",
-      "stationary_help": "Der Positionsmodus aktiviert sich, wenn das Fahrzeug f\u00fcr die konfigurierte Zeit station\u00e4r bleibt. Zeit: wie viele Minuten die Position stabil bleiben muss. Z\u00e4hler: wie viele GPS-Proben empfangen werden m\u00fcssen (0 = Z\u00e4hler umgehen, nur Zeit verwenden). Beispiel: 10 Minuten + 3 Proben = aktiviert nach 10 Minuten mit mindestens 3 stabilen GPS-Messungen.",
+      "stationary_help": "Der Positionsmodus aktiviert sich, wenn das Fahrzeug f\u00fcr die konfigurierte Zeit station\u00e4r bleibt. Zeit: wie viele Minuten die Position stabil bleiben muss. Z\u00e4hler: wie viele GPS-Proben empfangen werden m\u00fcssen (0 = Z\u00e4hler umgehen, nur Zeit verwenden). Beispiel: 30 Minuten + 2 Proben = aktiviert nach 30 Minuten mit mindestens 2 stabilen GPS-Messungen.",
       "manual_trigger_awaiting_title": "\u23f3 Guard activating...",
       "manual_trigger_awaiting_message": "Waiting for fresh GPS.",
       "save_awaiting_title": "\u23f3 Waiting for fresh GPS...",

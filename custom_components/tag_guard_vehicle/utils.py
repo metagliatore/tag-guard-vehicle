@@ -8,6 +8,9 @@ from .const import (
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
     CONF_WEBHOOK_TOKEN,
+    DEFAULT_TOLERANCE_RADIUS,
+    DEFAULT_STATIONARY_MINUTES,
+    DEFAULT_STATIONARY_COUNT,
     DOMAIN,
 )
 
@@ -384,7 +387,7 @@ def build_create_payload(user_input: dict, base: dict | None = None) -> tuple[di
     options = {
         CONF_PERSON_ENTITY: user_input.get(CONF_PERSON_ENTITY) or base.get(CONF_PERSON_ENTITY),
         CONF_NOTIFIER: user_input.get(CONF_NOTIFIER) or base.get(CONF_NOTIFIER),
-        CONF_TOLERANCE_RADIUS: user_input.get(CONF_TOLERANCE_RADIUS) or base.get(CONF_TOLERANCE_RADIUS, 200),
+        CONF_TOLERANCE_RADIUS: user_input.get(CONF_TOLERANCE_RADIUS) or base.get(CONF_TOLERANCE_RADIUS, DEFAULT_TOLERANCE_RADIUS),
         CONF_ACTIVATION_MODE: activation,
         "tag_model": user_input.get("tag_model") or base.get("tag_model"),
         "debug_mode": user_input.get("debug_mode", base.get("debug_mode", False)),
@@ -398,7 +401,7 @@ def build_create_payload(user_input: dict, base: dict | None = None) -> tuple[di
         options[CONF_STATIONARY_COUNT] = int(user_input.get(CONF_STATIONARY_COUNT, 0))
     elif base and CONF_STATIONARY_COUNT in base:
         # Preserve existing value from base if not in user_input
-        options[CONF_STATIONARY_COUNT] = int(base.get(CONF_STATIONARY_COUNT, 3))
+        options[CONF_STATIONARY_COUNT] = int(base.get(CONF_STATIONARY_COUNT, DEFAULT_STATIONARY_COUNT))
 
     return data, options
 

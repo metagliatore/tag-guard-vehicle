@@ -21,6 +21,9 @@ from .const import (
     CONF_PERSON_ENTITY,
     CONF_NOTIFIER,
     CONF_ACTIVATION_MODE,
+    DEFAULT_TOLERANCE_RADIUS,
+    DEFAULT_STATIONARY_MINUTES,
+    DEFAULT_STATIONARY_COUNT,
 )
 from .utils import (
     safe_get,
@@ -62,15 +65,15 @@ class VehicleCoordinator:
         self.notifier = options.get(CONF_NOTIFIER) or config.get(CONF_NOTIFIER)
         self.person_entity = options.get(CONF_PERSON_ENTITY) or config.get(CONF_PERSON_ENTITY)
         self.activation_mode = options.get(CONF_ACTIVATION_MODE) or config.get(CONF_ACTIVATION_MODE)
-        self.tolerance_radius = float(options.get(CONF_TOLERANCE_RADIUS) or config.get(CONF_TOLERANCE_RADIUS, 200))
-        self.stationary_minutes = int(options.get(CONF_STATIONARY_MINUTES) or config.get(CONF_STATIONARY_MINUTES, 10))
+        self.tolerance_radius = float(options.get(CONF_TOLERANCE_RADIUS) or config.get(CONF_TOLERANCE_RADIUS, DEFAULT_TOLERANCE_RADIUS))
+        self.stationary_minutes = int(options.get(CONF_STATIONARY_MINUTES) or config.get(CONF_STATIONARY_MINUTES, DEFAULT_STATIONARY_MINUTES))
         # stationary_count can be 0, so we use 'in' check instead of 'or' to preserve 0 values
         if CONF_STATIONARY_COUNT in options:
             self.stationary_count = int(options[CONF_STATIONARY_COUNT])
         elif CONF_STATIONARY_COUNT in config:
             self.stationary_count = int(config[CONF_STATIONARY_COUNT])
         else:
-            self.stationary_count = 3
+            self.stationary_count = DEFAULT_STATIONARY_COUNT
         # All activation modes start with alarm OFF
         # - Manual: user activates explicitly
         # - Connection: alarm activates automatically on disconnect event

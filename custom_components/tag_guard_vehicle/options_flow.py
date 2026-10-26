@@ -26,6 +26,9 @@ from .const import (
     CONF_STATIONARY_COUNT,
     CONF_ACTIVATION_MODE,
     CONF_WEBHOOK_TOKEN,
+    DEFAULT_TOLERANCE_RADIUS,
+    DEFAULT_STATIONARY_MINUTES,
+    DEFAULT_STATIONARY_COUNT,
     TAG_MODELS,
 )
 from .utils import get_webhook_url, needs_stationary_step
@@ -152,7 +155,7 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
             ): notifier_selector,
             vol.Required(
                 CONF_TOLERANCE_RADIUS,
-                default=current.get(CONF_TOLERANCE_RADIUS, 200),
+                default=current.get(CONF_TOLERANCE_RADIUS, DEFAULT_TOLERANCE_RADIUS),
             ): NumberSelector(
                 NumberSelectorConfig(
                     min=1,
@@ -192,7 +195,7 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_STATIONARY_MINUTES,
-                        default=current.get(CONF_STATIONARY_MINUTES, 10),
+                        default=current.get(CONF_STATIONARY_MINUTES, DEFAULT_STATIONARY_MINUTES),
                     ): NumberSelector(
                         NumberSelectorConfig(
                             min=1,
@@ -204,7 +207,7 @@ class TagGuardVehicleOptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONF_STATIONARY_COUNT,
-                        default=current.get(CONF_STATIONARY_COUNT, 3),
+                        default=current.get(CONF_STATIONARY_COUNT, DEFAULT_STATIONARY_COUNT),
                     ): NumberSelector(
                         NumberSelectorConfig(
                             min=0,

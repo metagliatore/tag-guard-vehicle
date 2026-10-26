@@ -13,7 +13,7 @@ Home Assistant integration to monitor and protect your vehicle using a Bluetooth
 1. **🅿️ Automatic Position Saving** - When you park your vehicle, the integration automatically saves the GPS coordinates from your Bluetooth tracker
 2. **🔐 Guard Activation** - After saving the position, monitoring is automatically activated (or manually, depending on your configuration)
 3. **� Always Know Where You Parked** - The parking location is saved in the sensor, so you can always find your vehicle
-4. **🚨 Theft/Movement Detection** - If your vehicle moves beyond the configured radius (default 200m), you receive an immediate notification
+4. **🚨 Theft/Movement Detection** - If your vehicle moves beyond the configured radius (default 500m), you receive an immediate notification
 5. **💾 Persistent Storage** - Your parking location is saved across Home Assistant restarts
 
 **Use Cases:**
@@ -64,7 +64,7 @@ You need one of these integrations installed to provide the `device_tracker` ent
    - **Device Tracker**: Your Bluetooth tag entity (e.g., `device_tracker.smarttag`)
    - **Activation Mode**: How to detect parking (see below)
    - **Notify Service**: Home Assistant notification service to use
-   - **Tolerance Radius**: Distance in meters before triggering alert (default: 200m)
+   - **Tolerance Radius**: Distance in meters before triggering alert (default: 500m)
 
 ### Activation Modes
 
@@ -387,9 +387,9 @@ Or via integration options: **Configure** → **Enable debug mode**
 | `device_tracker` | Your Bluetooth tracker entity | Required |
 | `activation_mode` | When to activate: `connection`, `position`, `combined`, `manual` | `manual` |
 | `notifier` | Home Assistant notify service | `notify.notify` |
-| `tolerance_radius` | Alert distance in meters | `200` |
-| `stationary_minutes` | Minutes stable before activation (position/combined modes) | `10` |
-| `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `3` |
+| `tolerance_radius` | Alert distance in meters | `500` |
+| `stationary_minutes` | Minutes stable before activation (position/combined modes) | `30` |
+| `stationary_count` | GPS samples required (0=immediate, 1+=require fresh GPS) | `2` |
 | `tag_model` | Bluetooth tag parser model | `vedeneb_ha_smartthings_find` |
 | `webhook_token` | Custom webhook token (auto-generated if empty) | Auto-generated |
 | `debug_mode` | Enable verbose logging | `false` |

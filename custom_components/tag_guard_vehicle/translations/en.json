@@ -17,7 +17,7 @@
           "tag_model": "🏷️ Select the SmartThings Find integration you use. Default works for most setups.",
           "activation_mode": "⚙️ 'combined' (recommended) — arms on disconnect OR stable position. 'position' — arms when GPS is stable. 'connection' — arms on Bluetooth disconnect. 'manual' — you control via buttons.",
           "notifier": "🔔 Service to use for alerts (e.g. notify.mobile_app).",
-          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 200).",
+          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 500).",
           "debug_mode": "🐛 Enable detailed logging for troubleshooting."
         }
       },
@@ -29,8 +29,8 @@
           "stationary_count": "Count (samples)"
         },
         "data_description": {
-          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 10.",
-          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 3."
+          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 30.",
+          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 2."
         }
       },
       "show_token": {
@@ -52,7 +52,7 @@
           "tag_model": "🏷️ Select the SmartThings Find integration you use. Default works for most setups.",
           "activation_mode": "⚙️ 'combined' (recommended) — arms on disconnect OR stable position. 'position' — arms when GPS is stable. 'connection' — arms on Bluetooth disconnect. 'manual' — you control via buttons.",
           "notifier": "🔔 Service to use for alerts (e.g. notify.mobile_app).",
-          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 200).",
+          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 500).",
           "debug_mode": "🐛 Enable detailed logging for troubleshooting."
         }
       },
@@ -64,8 +64,8 @@
           "stationary_count": "Count (samples)"
         },
         "data_description": {
-          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 10.",
-          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 3."
+          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 30.",
+          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 2."
         }
       }
     },
@@ -95,7 +95,7 @@
           "tag_model": "🏷️ Select the SmartThings Find integration you use. Default works for most setups.",
           "activation_mode": "⚙️ 'combined' (recommended) — arms on disconnect OR stable position. 'position' — arms when GPS is stable. 'connection' — arms on Bluetooth disconnect. 'manual' — you control via buttons.",
           "notifier": "🔔 Service to use for alerts (e.g. notify.mobile_app).",
-          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 200).",
+          "tolerance_radius": "📍 Minimum distance (meters) the vehicle must move before triggering an alert (default: 500).",
           "debug_mode": "🐛 Enable detailed logging for troubleshooting."
         }
       },
@@ -107,8 +107,8 @@
           "stationary_count": "Count (samples)"
         },
         "data_description": {
-          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 10.",
-          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 3."
+          "stationary_minutes": "⏱️ How many minutes the position must stay stable before the timer expires. Recommended: 30.",
+          "stationary_count": "📊 How many GPS samples confirm the position. Set 0 to bypass (activate when timer expires). Recommended: 2."
         }
       }
     }
