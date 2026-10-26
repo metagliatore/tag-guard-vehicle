@@ -1,3 +1,14 @@
+## v1.1.0 (2026-10-26)
+
+### Feat
+
+- **config**: update default wizard parameters (tolerance=500m, stationary=30min/2 samples)
+- **brand**: setup integration brand assets from transparent logo and add banner to README
+
+### Fix
+
+- **brand**: remove non-standard icon keys from manifest and mirror assets to component root
+
 ## v1.0.0 (2026-09-26)
 
 ### BREAKING CHANGE
